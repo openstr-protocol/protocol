@@ -1,0 +1,9 @@
+# OpenSTR Protocol — OpenAPI Specification
+# Version: 0.1.0-draft
+# Status: Pending — will be published alongside RFC candidate status
+# See rfcs/ for the normative protocol definitions
+openapi: "3.1.0"
+info:
+  title: OpenSTR Protocol
+  version: 0.1.0-draft
+  description: Placeholder — full OpenAPI spec to follow RFC candidate release.
