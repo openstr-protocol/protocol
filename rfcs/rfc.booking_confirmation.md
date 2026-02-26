@@ -549,7 +549,9 @@ If `requested_by` is `host`, the guest is entitled to a full refund regardless o
 
 **11.1 Asynchronous callbacks.** Instead of polling the `status_endpoint`, should the spec define a webhook or callback mechanism for request-to-book status updates? A callback extension is deferred to a future SEP.
 
-**11.2 Booking modification.** This RFC defines creation and cancellation of bookings but not modification (date changes, guest count changes). A modification endpoint is deferred to a future SEP.
+**11.2 Booking modification.** This RFC defines creation and cancellation of bookings but not modification. In v0.1, all changes to a confirmed booking require cancellation and rebooking. This is a known limitation — cancel-and-rebook incurs two full payment transactions with associated provider fees on both, risks the desired dates becoming unavailable in the interim, and may trigger cancellation policy penalties unnecessarily.
+
+A dedicated `POST /openstr/booking/:reference/amend` endpoint is planned for v0.2. Three amendment types have been identified: zero-cost amendments (guest count changes within the same pricing tier, guest detail corrections), top-up amendments (pet additions, guest count changes crossing a fee threshold), and repricing amendments (date changes). Each requires different payment settlement behaviour. See `docs/DISCUSSION.md` for full design context, open questions, and a proposed endpoint sketch.
 
 **11.3 Smart lock token format.** Automated smart lock token generation, time-limited access, and API-based delivery are v0.4 concerns. The token format and delivery mechanism will be defined in the operational tooling RFC.
 
