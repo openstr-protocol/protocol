@@ -6,6 +6,8 @@
 
 **An open standard for machine-readable short-term rental property discovery and booking, designed for AI agent workflows.**
 
+**[→ Try the live API explorer](https://demo.openstr.org/test)** — fire requests against a working reference implementation directly in your browser.
+
 ---
 
 ## What is OpenSTR?
