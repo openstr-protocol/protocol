@@ -66,6 +66,7 @@ Core protocol documents are called RFCs (Requests for Comments). RFCs define the
 | `rfc.availability_query.md` | Availability and Pricing Query | Draft |
 | `rfc.booking_confirmation.md` | Booking Request, Confirmation, and Cancellation | Draft |
 | `rfc.identity_trust.md` | Host and Guest Identity, Credentials, and Trust | Draft |
+| `rfc.discovery_index.md` | Discovery Index, Agent Query API, and Host Reputation | Draft |
 
 RFCs progress through the following statuses:
 
