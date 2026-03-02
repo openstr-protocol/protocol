@@ -3,10 +3,11 @@
 **RFC ID:** openstr-rfc-001  
 **Title:** Property Listing Schema and Discovery  
 **Status:** Draft  
-**Version:** 0.1.3  
+**Version:** 0.1.4  
 **Created:** February 2026  
+**Updated:** March 2026  
 **Authors:** Daniel Bloom (openstr.org)  
-**Supersedes:** openstr-rfc-001 v0.1.2  
+**Supersedes:** openstr-rfc-001 v0.1.3  
 
 ---
 
@@ -195,16 +196,37 @@ Sub-types are only meaningful for certain categories. Agents should treat unknow
 | `villa` | `house` | Larger detached property, typically with outdoor space |
 | `cabin` | `unique_space` | Wooden cabin or lodge |
 | `treehouse` | `unique_space` | Elevated structure built in or around a tree |
-| `tiny_house` | `unique_space` | Compact purpose-built small home |
+| `tiny_home` | `unique_space` | Compact purpose-built small home |
 | `houseboat` | `unique_space` | Permanently or semi-permanently moored vessel |
+| `narrowboat` | `unique_space` | Canal narrowboat |
 | `shepherds_hut` | `unique_space` | Traditional or contemporary shepherd's hut |
 | `yurt` | `unique_space` | Circular tent structure |
+| `tipi` | `unique_space` | Conical tent structure |
+| `dome` | `unique_space` | Geodesic or inflatable dome structure |
 | `glamping_pod` | `unique_space` | Insulated outdoor sleeping pod |
-| `converted_barn` | `unique_space` | Agricultural building converted to residential use |
+| `tent` | `unique_space` | Permanent or semi-permanent tent structure |
+| `barn` | `unique_space` | Agricultural building converted to residential use |
+| `farm_stay` | `unique_space` | Accommodation on a working farm |
+| `boat` | `unique_space` | Vessel not permanently moored |
+| `camper_van` | `unique_space` | Converted camper van or motorhome |
+| `bus` | `unique_space` | Converted bus or double-decker |
+| `plane` | `unique_space` | Converted aircraft |
+| `train` | `unique_space` | Converted railway carriage |
 | `castle` | `unique_space` | Historic castle or fortified building |
+| `tower` | `unique_space` | Converted tower or turret |
 | `lighthouse` | `unique_space` | Converted lighthouse |
+| `windmill` | `unique_space` | Converted windmill |
+| `cave` | `unique_space` | Cave dwelling or underground structure |
+| `earthen_home` | `unique_space` | Earth-sheltered or hobbit-style dwelling |
+| `hut` | `unique_space` | Simple hut or bothy |
+| `riad` | `unique_space` | North African courtyard house |
+| `ranch` | `unique_space` | Ranch or working estate accommodation |
+| `religious_building` | `unique_space` | Converted chapel, church, or other religious building |
+| `shipping_container` | `unique_space` | Converted shipping container |
+| `campsite` | `unique_space` | Designated campsite pitch or area |
 | `guest_suite` | `secondary_unit` | Self-contained suite attached to host's property |
 | `garden_flat` | `secondary_unit` | Ground-floor or basement flat with garden access |
+| `other` | any | Distinctive property not covered by the above vocabulary |
 
 ### 4.4 Location Object
 
@@ -296,11 +318,12 @@ Declares the host's discount and promotional structure. For `static` hosts, agen
 
 | Field | Type | Description |
 |---|---|---|
-| `cancellation_policy` | enum | `flexible`, `moderate`, `strict`, `non_refundable` |
-| `check_in_time` | string | Earliest check-in time in `HH:MM` 24-hour format |
+| `cancellation_policy` | enum | `flexible`, `moderate`, `firm`, `strict` |
+| `check_in_time_from` | string | Earliest check-in time in `HH:MM` 24-hour format |
+| `check_in_time_to` | string | Latest check-in time in `HH:MM` 24-hour format. Omit if no upper limit. |
 | `check_out_time` | string | Latest check-out time in `HH:MM` 24-hour format |
 | `pets` | object | Pet policy object. See Section 4.8.1. |
-| `smoking_allowed` | boolean | Whether smoking is permitted |
+| `smoking_allowed` | boolean | Whether smoking, vaping or e-cigarettes are permitted |
 | `events_allowed` | boolean | Whether events or parties are permitted |
 | `instant_book` | boolean | Whether bookings are confirmed instantly or require host approval |
 | `damage_guarantee` | object | Damage guarantee object. See Section 4.8.2. |
@@ -310,11 +333,14 @@ Declares the host's discount and promotional structure. For `static` hosts, agen
 
 | Field | Type | Description |
 |---|---|---|
-| `children_allowed` | boolean | Whether children are permitted. Omission implies no restriction. |
-| `infants_allowed` | boolean | Whether infants are permitted. |
-| `age_restriction_min` | integer | Minimum guest age, if applicable. |
-| `quiet_hours_start` | string | Start of quiet hours in `HH:MM` format. |
-| `quiet_hours_end` | string | End of quiet hours in `HH:MM` format. |
+| `quiet_hours_start` | string | Start of quiet hours in `HH:MM` format |
+| `quiet_hours_end` | string | End of quiet hours in `HH:MM` format |
+| `age_restrictions` | array[object] | Age suitability restrictions. See Section 4.8.3. |
+| `good_track_record_required` | boolean | Host requires guests with a verified positive booking history. Maps to GuestCredential `booking_history` claim in RFC-004. |
+| `ev_charging_permitted` | boolean | Whether electric vehicle charging via property sockets is permitted. Omission implies no stated restriction. |
+| `availability_window_months` | integer | How many months in advance the property is bookable. |
+| `advance_notice` | object | Advance notice requirements. See Section 4.8.4. |
+| `house_rules` | array[string] | Structured list of house rules. Max 20 items, 200 characters each. |
 
 #### 4.8.1 Pet Policy Object
 
@@ -323,7 +349,8 @@ Declares the host's discount and promotional structure. For `static` hosts, agen
 | `allowed` | boolean | Yes | Whether pets are permitted |
 | `pets_max` | integer | No | Maximum number of pets. Omission implies no stated limit if `allowed` is `true`. |
 | `pet_fee` | object | No | `{ "amount": number, "currency": string, "per": "per_stay" or "per_night" }` |
-| `pet_notes` | string | No | Freeform notes on pet policy. Max 300 characters. |
+| `pet_restrictions` | array[string] | No | Structured list of pet restrictions. Max 10 items, 200 characters each. e.g. `"No pets on beds"`, `"No pets left unattended"`, `"No dangerous or banned breeds"` |
+| `host_pets_on_property` | boolean | No | Whether the host's own pets live at or visit the property. Guests may encounter host pets during their stay. |
 
 #### 4.8.2 Damage Guarantee Object
 
@@ -342,6 +369,39 @@ Declares the host's discount and promotional structure. For `static` hosts, agen
 | `email_verified` | Email address verified by a recognised credential issuer |
 | `identity_verified` | Identity verified against a government-issued document (passport, national ID, or driving licence) by a recognised IDV provider |
 | `payment_verified` | Payment method verified with financial guarantee in place via the credential issuer |
+
+#### 4.8.3 Age Restrictions Array
+
+An array of objects describing age-based suitability restrictions. Each object has the following fields:
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `not_suitable_under_age` | integer | Yes | Property is not suitable for guests or accompanying children under this age |
+| `reason` | string | Yes | Freeform explanation for the restriction. Max 300 characters. |
+
+**Example:**
+
+```json
+"age_restrictions": [
+  {
+    "not_suitable_under_age": 12,
+    "reason": "High entrance step — not suitable for guests with mobility issues or children under 12. Not suitable for infants or toddlers."
+  }
+]
+```
+
+Multiple restrictions may be declared if different features give rise to different age thresholds.
+
+**Agent behaviour:** Agents must surface age restrictions prominently when showing a listing to a user, and must prompt the user to confirm whether any member of their party falls below a stated age threshold before proceeding to booking.
+
+#### 4.8.4 Advance Notice Object
+
+Declares the host's requirements for notice between booking and arrival.
+
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `min_days_notice` | integer | Yes | Minimum number of days notice required between booking and arrival. `0` means same-day bookings considered. |
+| `allow_short_notice_requests` | boolean | No | Whether the host will consider requests with less notice than `min_days_notice`. If `true`, agents should indicate that short-notice requests may be accepted at host discretion. |
 
 ### 4.9 Safety Disclosures Object
 
@@ -362,8 +422,6 @@ All fields are required within this object. Where a condition does not apply, th
 
 | Field | Type | Description |
 |---|---|---|
-| `not_suitable_infants` | boolean | Property is not suitable for children under 2 years |
-| `not_suitable_children` | boolean | Property is not suitable for children generally (e.g. unfenced drop, hazardous features) |
 | `pool_present` | boolean | Pool present on property — relevant for families with young children |
 | `hot_tub_present` | boolean | Hot tub present |
 | `security_cameras_exterior` | boolean | Security cameras present on exterior of property. Hosts must disclose this. |
@@ -373,25 +431,29 @@ All fields are required within this object. Where a condition does not apply, th
 | `noise_disclaimer` | string | Freeform description of known noise sources. Max 300 characters. |
 | `safety_notes` | string | Any additional safety information the host wishes to disclose. Max 500 characters. |
 
+**Note:** Age-based suitability restrictions (e.g. not suitable for children under 12) are declared in `policies.age_restrictions` rather than in `safety_disclosures`, to allow agents to reason about them structurally. Host pet disclosures are declared in `policies.pets.host_pets_on_property`. Agents must treat both as safety-relevant and surface them prominently alongside `safety_disclosures`.
+
 ### 4.10 Amenity Vocabulary
 
 Standardised values for the `amenities` array. Prefix freeform amenities with `custom:`.
 
 **Connectivity:** `wifi`, `wifi_fast` (>100Mbps), `ethernet`
 
-**Kitchen:** `kitchen_full`, `kitchen_kitchenette`, `dishwasher`, `washing_machine`, `dryer`, `coffee_maker`, `kettle`
+**Kitchen:** `kitchen_full`, `kitchen_kitchenette`, `dishwasher`, `washing_machine`, `dryer`, `coffee_maker`, `kettle`, `toaster`, `oven`, `cooker`, `microwave`, `mini_fridge`, `fridge`, `freezer`, `cooking_basics`, `crockery_and_cutlery`, `wine_glasses`, `dining_table`
 
-**Climate:** `air_conditioning`, `heating_central`, `heating_portable`, `fireplace`
+**Climate:** `air_conditioning`, `heating_central`, `heating_portable`, `indoor_fireplace`
 
-**Outdoor:** `garden_private`, `garden_shared`, `balcony`, `terrace`, `parking_private`, `parking_street`
+**Outdoor:** `garden_private`, `garden_shared`, `balcony`, `patio`, `terrace`, `outdoor_dining_area`, `outdoor_furniture`, `sun_loungers`, `parking_private`, `parking_street`, `private_entrance`
 
 **Safety:** `smoke_detector`, `carbon_monoxide_detector`, `fire_extinguisher`, `first_aid_kit` (also declare these in `safety_disclosures`)
 
 **Accessibility:** `lift`, `step_free_access`, `wide_doorways`
 
-**Entertainment:** `tv`, `tv_streaming`, `games_console`
+**Entertainment:** `tv`, `tv_streaming`, `board_games`, `books`, `games_console`
 
 **Work:** `dedicated_workspace`, `monitor_external`
+
+**Bedroom and bathroom:** `bed_linen`, `towels`, `room_darkening_blinds`, `clothes_storage`, `hair_dryer`, `body_soap`, `shampoo`, `conditioner`, `shower_gel`, `hot_water`, `cleaning_products`
 
 ### 4.11 Environment Tags Vocabulary
 
@@ -402,7 +464,8 @@ Standardised values for the `environment_tags` array. Describes the property's p
 | `city_centre` | Located in or immediately adjacent to a city centre |
 | `urban` | Urban residential area |
 | `suburban` | Suburban residential area |
-| `countryside` | Rural or semi-rural setting |
+| `rural` | Rural or semi-rural setting |
+| `countryside` | Open countryside or agricultural landscape |
 | `coastal` | Near the coast or seafront |
 | `beachfront` | Direct beach access |
 | `lakefront` | Direct lake access |
@@ -411,8 +474,12 @@ Standardised values for the `environment_tags` array. Describes the property's p
 | `forest` | Woodland or forest setting |
 | `ski_in_ski_out` | Direct access to ski slopes |
 | `desert` | Desert setting |
-| `island` | Located on an island |
 | `historic_district` | Located within a designated historic area |
+| `historic` | Property or grounds of historic character or significance |
+| `estate` | Located within a private estate or country estate grounds |
+| `farm` | Located on or adjacent to a working farm |
+| `nature_reserve` | Adjacent to or within a nature reserve or protected area |
+| `village` | Located in a village or small settlement |
 
 ### 4.12 Image Object
 
@@ -506,7 +573,8 @@ A complete example of a valid OpenSTR property listing. The host uses PriceLabs 
   },
   "policies": {
     "cancellation_policy": "moderate",
-    "check_in_time": "15:00",
+    "check_in_time_from": "15:00",
+    "check_in_time_to": "21:00",
     "check_out_time": "11:00",
     "pets": {
       "allowed": true,
@@ -516,7 +584,11 @@ A complete example of a valid OpenSTR property listing. The host uses PriceLabs 
         "currency": "USD",
         "per": "per_stay"
       },
-      "pet_notes": "Small dogs and cats only. Must not be left unattended."
+      "pet_restrictions": [
+        "Small dogs and cats only.",
+        "Pets must not be left unattended."
+      ],
+      "host_pets_on_property": false
     },
     "smoking_allowed": false,
     "events_allowed": false,
@@ -526,14 +598,27 @@ A complete example of a valid OpenSTR property listing. The host uses PriceLabs 
       "idv_level": "identity_verified"
     },
     "check_in_method": "self_checkin_smartlock",
-    "children_allowed": true
+    "quiet_hours_start": "22:00",
+    "quiet_hours_end": "08:00",
+    "good_track_record_required": true,
+    "ev_charging_permitted": false,
+    "availability_window_months": 12,
+    "advance_notice": {
+      "min_days_notice": 1,
+      "allow_short_notice_requests": false
+    },
+    "house_rules": [
+      "No smoking, vaping or e-cigarettes.",
+      "No parties or events.",
+      "Quiet hours 22:00–08:00.",
+      "Maximum 4 guests."
+    ]
   },
   "safety_disclosures": {
     "smoke_detector": true,
     "carbon_monoxide_detector": true,
     "fire_extinguisher": true,
     "first_aid_kit": true,
-    "not_suitable_infants": false,
     "security_cameras_exterior": false,
     "security_cameras_interior": false
   },
@@ -545,7 +630,10 @@ A complete example of a valid OpenSTR property listing. The host uses PriceLabs 
     "garden_private",
     "dedicated_workspace",
     "heating_central",
-    "tv_streaming"
+    "tv_streaming",
+    "bed_linen",
+    "towels",
+    "hair_dryer"
   ],
   "environment_tags": ["urban", "city_centre"],
   "year_built": 1932,
@@ -577,11 +665,21 @@ A complete example of a valid OpenSTR property listing. The host uses PriceLabs 
 
 **6.5 IDV requirements:** Agents must check `damage_guarantee.idv_level` before initiating a booking and confirm the guest's credential satisfies it.
 
-**6.6 Safety disclosures:** Agents must present `safety_disclosures` prominently when showing a listing to a user, particularly `not_suitable_infants`, `not_suitable_children`, `security_cameras_exterior`, `security_cameras_interior`, and `weapons_on_premises`.
+**6.6 Safety disclosures:** Agents must present `safety_disclosures` prominently when showing a listing to a user, particularly `security_cameras_exterior`, `security_cameras_interior`, and `weapons_on_premises`.
 
 **6.7 Pricing rules for static hosts:** For `static` listings, agents may use `pricing_rules` to pre-calculate estimated totals for agent-side filtering and pre-trip cost estimates. The availability endpoint remains the authoritative source before booking.
 
 **6.8 Unknown fields:** Agents must ignore unknown fields to ensure forward compatibility.
+
+**6.9 Age restrictions:** Agents must surface `policies.age_restrictions` prominently alongside safety disclosures. Before proceeding to booking, agents must prompt the user to confirm whether any member of their party falls below a stated age threshold. A booking must not be initiated if the guest confirms a party member is below a stated threshold, unless the host explicitly overrides this via a booking request response.
+
+**6.10 Check-in window:** Where `check_in_time_from` and `check_in_time_to` are both present, agents must communicate the full window to guests rather than only the earliest time.
+
+**6.11 Advance notice:** Where `policies.advance_notice` is present, agents must not present same-day or near-term dates as bookable without checking. If `allow_short_notice_requests` is `true`, agents may indicate that short-notice requests may be considered at host discretion but must not confirm availability without an availability query.
+
+**6.12 Good track record requirement:** Where `policies.good_track_record_required` is `true`, agents must check that the guest holds a GuestCredential with a valid `booking_history` claim before initiating a booking. See RFC-004.
+
+**6.13 Host pets:** Where `policies.pets.host_pets_on_property` is `true`, agents must disclose this to the guest before booking, particularly where the guest has stated allergies or preferences.
 
 ---
 
@@ -607,7 +705,7 @@ A complete example of a valid OpenSTR property listing. The host uses PriceLabs 
 
 **8.2 Multi-unit properties:** Parent/child listing pattern for multi-unit properties deferred.
 
-**8.3 Cancellation policy terms:** Precise refund terms not standardised in v0.1.
+**8.3 Cancellation policy terms:** Precise refund terms for each tier not standardised in v0.1.
 
 **8.4 Recognised IDV issuers:** Community-governed trusted issuer registry proposed for v1.0.
 
@@ -615,9 +713,11 @@ A complete example of a valid OpenSTR property listing. The host uses PriceLabs 
 
 **8.6 Smart lock integration:** Automatic time-limited access code generation via smart lock APIs is a v0.4 concern.
 
-**8.7 Amenity and sub-type vocabulary completeness:** Both vocabularies are intentionally limited in v0.1. Community contributions welcome via the SEP process.
+**8.7 Amenity and sub-type vocabulary completeness:** The sub-type vocabulary was significantly expanded in v0.1.4 using cross-industry property classification references. Further additions welcome via the SEP process.
 
 **8.8 Promotional pricing verification:** No mechanism currently exists for an agent to verify that a declared promotion is genuine. A promotion verification extension is deferred to a future SEP.
+
+**8.9 EV charging:** The `ev_charging_permitted` field in v0.1.4 covers the common restriction case. A future SEP may define a structured EV charging capability field (charge speed, connector type, fee) for properties that actively offer EV charging as an amenity.
 
 ---
 
@@ -629,6 +729,7 @@ A complete example of a valid OpenSTR property listing. The host uses PriceLabs 
 | 0.1.1-draft | February 2026 | `name` → `listing_name`; pets expanded to object; `min_stay` expanded to object with `min_stay_mode`; two-stage location updated; `security_deposit` replaced with `damage_guarantee` with IDV tiers; Schema.org rationale clarified |
 | 0.1.2-draft | February 2026 | `property_type` replaced with three-tier `property_classification` object; `pricing_rules` object added for static host discount and promotional structure; `safety_disclosures` object added as required field; `environment_tags` vocabulary added; `year_built` and `property_size` added as optional fields; sub-type vocabulary expanded |
 | 0.1.3-draft | February 2026 | Section 2.2 added — Property Classification Conventions — documenting independent derivation of classification vocabulary from OTA, Schema.org, and industry-standard terminology |
+| 0.1.4-draft | March 2026 | Sub-type vocabulary expanded to 37 values covering full range of unique property types; `check_in_time` split into `check_in_time_from` / `check_in_time_to` window; `policies.age_restrictions` array added with freeform reason (replaces `not_suitable_infants` / `not_suitable_children` booleans); `policies.advance_notice` object added; `policies.good_track_record_required` boolean added; `policies.ev_charging_permitted` boolean added; `policies.availability_window_months` added; `policies.house_rules` promoted to structured array; `pets.pet_restrictions` array added; `pets.host_pets_on_property` boolean added; `not_suitable_infants` and `not_suitable_children` removed from `safety_disclosures` with note directing agents to `policies.age_restrictions`; amenity vocabulary expanded with kitchen, bedroom, bathroom, and outdoor items; environment tags expanded with `rural`, `countryside`, `historic`, `estate`, `farm`, `nature_reserve`, `village`; cancellation policy vocabulary corrected to `flexible`, `moderate`, `firm`, `strict`; agent behaviour guidelines expanded to cover all new fields (6.9–6.13) |
 
 ---
 
