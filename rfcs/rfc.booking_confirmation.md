@@ -3,10 +3,10 @@
 **RFC ID:** openstr-rfc-003  
 **Title:** Booking Request, Confirmation, and Cancellation  
 **Status:** Draft  
-**Version:** 0.1.0  
+**Version:** 0.1.1  
 **Created:** February 2026  
 **Authors:** Daniel Bloom (openstr.org)  
-**Supersedes:** None  
+**Supersedes:** openstr-rfc-003 v0.1.0  
 
 ---
 
@@ -68,6 +68,8 @@ Before confirming a booking, the host system must validate the guest's `GuestCre
 ### 3.4 Payment Delegation
 
 OpenSTR does not define a payment mechanism. Payment is handled by ACP or AP2-compatible payment handlers. The booking request carries a `payment_token` issued by the guest's payment provider. The host system submits this token to the payment handler to authorise the charge. The booking response includes a `payment_reference` from the payment handler confirming authorisation.
+
+> **Note:** ACP and AP2 are emerging standards as of v0.1. OpenSTR's payment delegation model is forward-looking — implementations in the near term may use alternative payment token mechanisms while these standards mature. A payment extension SEP is planned to address interim implementation patterns.
 
 ### 3.5 Post-Confirmation Location Disclosure
 
@@ -194,7 +196,7 @@ Returned synchronously when `instant_book` is `true` and all validations pass.
 | `guests` | integer | Confirmed guest count |
 | `pricing_confirmed` | object | Final confirmed pricing. Echo of availability response pricing breakdown. |
 | `payment_reference` | string | Reference returned by the payment handler confirming charge authorisation |
-| `policies_confirmed` | object | Final confirmed policies snapshot. See Section 4.5 of rfc.availability_query.md. |
+| `policies_confirmed` | object | Final confirmed policies snapshot. See Section 4.5 of rfc.availability_query.md. Fields include `check_in_time_from` and `check_in_time_to` (split window). |
 | `location_detail` | object | Full property location, disclosed post-confirmation. See Section 5.3. |
 | `access` | object | Access information for check-in. See Section 5.4. |
 | `host_contact` | object | Host contact details for this booking. See Section 5.5. |
@@ -312,7 +314,7 @@ Content-Type: application/json
 | `booking_reference` | string | Echo of booking reference |
 | `status` | enum | Always `cancelled` in this response |
 | `cancelled_at` | string (ISO 8601 datetime) | Timestamp of cancellation |
-| `cancellation_policy_applied` | enum | The cancellation policy that was applied: `flexible`, `moderate`, `strict`, or `non_refundable` |
+| `cancellation_policy_applied` | enum | The cancellation policy that was applied: `flexible`, `moderate`, `firm`, or `strict` |
 | `refund` | object | Refund details. See Section 6.3. |
 | `payment_reference` | string | Reference for the refund transaction with the payment handler |
 
@@ -331,12 +333,16 @@ Content-Type: application/json
 
 The refund amount is calculated by the host system based on the `cancellation_policy` declared in the listing and confirmed in the booking response. The following indicative refund structure is defined in v0.1 as a reference. Hosts may declare custom terms in the listing's `house_rules` field, which take precedence.
 
-| Policy | Cancelled 7+ days before check-in | Cancelled 2–6 days before | Cancelled within 24 hours or after check-in |
+| Policy | Cancelled 30+ days before check-in | Cancelled 7–29 days before check-in | Cancelled < 7 days before / after check-in |
 |---|---|---|---|
 | `flexible` | 100% refund | 100% refund | 50% refund |
 | `moderate` | 100% refund | 50% refund | No refund |
+| `firm` | 100% refund | 50% refund | No refund |
 | `strict` | 50% refund | No refund | No refund |
-| `non_refundable` | No refund | No refund | No refund |
+
+> **Note on `moderate` vs `firm`:** Both policies share the same percentage structure within these bands. The distinction is the threshold at which the full-refund window closes: `moderate` gives guests until 5 days before check-in for a full refund; `firm` requires 30 days' notice. Both apply a 50% refund in the intermediate window and no refund close to check-in. The column bands above are illustrative — host systems must implement the exact threshold logic for each policy.
+
+> **Note on `strict`:** As of October 2025, Airbnb no longer offers `strict` for new listings. OpenSTR retains it for compatibility with existing listings declared under this policy. Its long-term inclusion in the enum is an open question — see Section 11.
 
 **Note:** Cleaning fee is refunded in full if the cancellation occurs before check-in, regardless of policy. The cancellation policy applies to the accommodation cost only.
 
@@ -433,7 +439,8 @@ If `requested_by` is `host`, the guest is entitled to a full refund regardless o
   "payment_reference": "acp_pay_9ZxYwVuTsRqPoNmLkJiHgFe",
   "policies_confirmed": {
     "cancellation_policy": "moderate",
-    "check_in_time": "15:00",
+    "check_in_time_from": "15:00",
+    "check_in_time_to": "20:00",
     "check_out_time": "11:00",
     "instant_book": true,
     "damage_guarantee": {
@@ -559,7 +566,7 @@ A dedicated `POST /openstr/booking/:reference/amend` endpoint is planned for v0.
 
 **11.5 Multi-guest credential submission.** The booking request carries a single `GuestCredential` for the lead guest. Whether co-guests should also present credentials is an open question, particularly for large groups. Deferred to a future SEP.
 
-**11.6 Receipt and invoice format.** A standardised machine-readable receipt or invoice format for tax and expense purposes is not defined in v0.1. Deferred to a future SEP.
+**11.7 `strict` policy deprecation.** Airbnb has phased out `strict` for new listings from October 2025. OpenSTR retains it for compatibility with listings already declared under this policy. Whether `strict` should be deprecated in a future version — or replaced with a more descriptive equivalent — is an open question for community input.
 
 ---
 
@@ -568,6 +575,7 @@ A dedicated `POST /openstr/booking/:reference/amend` endpoint is planned for v0.
 | Version | Date | Notes |
 |---|---|---|
 | 0.1.0-draft | February 2026 | Initial draft |
+| 0.1.1-draft | March 2026 | `cancellation_policy_applied` enum corrected to `flexible`, `moderate`, `firm`, `strict` (removing `non_refundable`; adding `firm`) to align with RFC-001 v0.1.4. Section 6.4 cancellation policy table updated: column bands revised to 30+ / 7–29 / <7 days; `firm` added; `non_refundable` removed; prose note added explaining `moderate` vs `firm` threshold distinction; note added on `strict` deprecation trajectory. `check_in_time` in `policies_confirmed` split into `check_in_time_from` / `check_in_time_to` window fields to align with RFC-001 v0.1.4; Section 8.1 example updated. ACP/AP2 maturity caveat added to Section 3.4. Open question 11.7 added re: `strict` policy deprecation. |
 
 ---
 
