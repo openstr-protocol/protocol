@@ -1,7 +1,7 @@
 # OpenSTR Channel Manager Integration Guide
 
-**Document version:** 0.1.0  
-**Protocol version:** OpenSTR v0.1 (RFC-001 v0.1.4, RFC-002 v0.1.1, RFC-003 v0.1.0, RFC-004 v0.1.0)  
+**Document version:** 0.1.1  
+**Protocol version:** OpenSTR v0.1 (RFC-001 v0.1.5, RFC-002 v0.1.1, RFC-003 v0.1.1, RFC-004 v0.1.0)  
 **Audience:** Property Management Systems (PMS) and channel managers  
 **Status:** Draft — for feedback and implementation
 
@@ -55,46 +55,68 @@ The full schema is defined in [RFC-001 (rfc.property_listing.md)](https://github
 
 ```json
 {
-  "listing_id": "your-listing-identifier",
-  "listing_status": "active",
+  "openstr_version": "0.1",
+  "listing_id": "your-namespace-property-001",
   "listing_name": "The Walled Garden Hut",
-  "listing_description": "...",
+  "listing_url": "https://yourdomain.com/walled-garden-hut",
   "property_classification": {
     "category": "unique_space",
     "sub_type": "shepherds_hut",
-    "style": "rural_retreat"
+    "occupancy_type": "entire_place"
   },
+  "description": "A peaceful shepherd's hut set within a walled garden in rural Norfolk.",
   "location": {
-    "country": "GB",
+    "city": "Snettisham",
     "region": "Norfolk",
-    "place": "Snettisham",
-    "latitude": 52.8573,
-    "longitude": 0.4937,
-    "approximate_location": true
+    "country": "GB",
+    "postcode_area": "PE31",
+    "approximate_lat": 52.87,
+    "approximate_lng": 0.51,
+    "timezone": "Europe/London"
   },
   "capacity": {
-    "guests_max": 2,
-    "bedrooms": 1,
+    "guests": 2,
     "beds": 1,
-    "bathrooms": 1
+    "bed_types": ["king"]
   },
+  "bedrooms": 1,
+  "bathrooms": 1,
   "pricing": {
     "currency": "GBP",
-    "nightly_rate": 150,
-    "cleaning_fee": 35
+    "nightly_rate_indicative": 150,
+    "cleaning_fee": 0,
+    "pricing_mode": "static"
+  },
+  "min_stay": {
+    "min_stay_nights": 2,
+    "min_stay_mode": "static"
+  },
+  "availability_endpoint": "https://availability.openstr.org/availability/your-listing-id",
+  "booking_endpoint": "https://availability.openstr.org/booking/your-listing-id",
+  "host_credential": {
+    "credential_uri": "https://availability.openstr.org/.well-known/host-credential.json",
+    "issuer": "openstr.org",
+    "issued_at": "2026-01-01T00:00:00Z"
   },
   "policies": {
+    "cancellation_policy": "moderate",
     "check_in_time_from": "15:00",
     "check_in_time_to": "20:00",
     "check_out_time": "11:00",
-    "min_nights": 2,
-    "cancellation_policy": "moderate"
+    "smoking_allowed": false,
+    "events_allowed": false,
+    "instant_book": true,
+    "check_in_method": "self_checkin_keybox",
+    "damage_guarantee": { "mode": "none" },
+    "pets": { "allowed": false }
   },
   "safety_disclosures": {
-    "has_co_detector": true,
-    "has_smoke_detector": true
+    "smoke_detector": true,
+    "carbon_monoxide_detector": true,
+    "fire_extinguisher": true,
+    "first_aid_kit": true
   },
-  "host_did": "did:openstr:your-host-id"
+  "updated_at": "2026-01-01T00:00:00Z"
 }
 ```
 
@@ -104,7 +126,7 @@ The `property_classification` object uses a three-field taxonomy:
 
 - **`category`** — top-level type: `entire_place`, `private_room`, `shared_room`, `unique_space`
 - **`sub_type`** — more specific descriptor (see full vocabulary in RFC-001; 37 values including `cottage`, `apartment`, `villa`, `cabin`, `treehouse`, `shepherds_hut`, `yurt`, `boat`, `windmill`, and more)
-- **`style`** — character descriptor: `beachfront`, `mountain_retreat`, `city_centre`, `rural_retreat`, `lakeside`, `garden_setting`, etc.
+- **`occupancy_type`** — `entire_place`, `private_room`, or `shared_room`
 
 ### 3.4 Mapping from your PMS data model
 
@@ -113,12 +135,12 @@ Most PMS data models map cleanly to RFC-001. The main translation points are:
 | Your field | RFC-001 field |
 |---|---|
 | Property type | `property_classification.category` + `sub_type` |
-| Max guests | `capacity.guests_max` |
-| Nightly rate | `pricing.nightly_rate` |
+| Max guests | `capacity.guests` |
+| Nightly rate | `pricing.nightly_rate_indicative` |
 | Check-in time | `policies.check_in_time_from` / `check_in_time_to` |
 | Cancellation policy | `policies.cancellation_policy` (`flexible`, `moderate`, `firm`, `strict`) |
-| Amenities | `amenities[]` — standard vocabulary in RFC-001 Section 6 |
-| Location | `location.country`, `region`, `place`, `latitude`, `longitude` |
+| Amenities | `amenities[]` — standard vocabulary in RFC-001 Section 4.10 |
+| Location | `location.country`, `region`, `city`, `approximate_lat`, `approximate_lng`, `timezone` |
 
 ### 3.5 Generating listing_id values
 
@@ -528,7 +550,7 @@ To remove a listing from the index, set `listing_status` to `inactive` in the li
 
 ### 11.1 Validate your listing JSON
 
-A public validator is available at [https://openstr.org/validate](https://openstr.org/validate)
+Use the public validator at **[openstr.org/validate](https://openstr.org/validate)** to check your listing JSON against the RFC-001 v0.1.5 schema before registering. Paste your listing JSON and click Validate — errors and warnings are shown inline.
 
 ### 11.2 End-to-end test flow
 
