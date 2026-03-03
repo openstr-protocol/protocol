@@ -3,11 +3,11 @@
 **RFC ID:** openstr-rfc-001  
 **Title:** Property Listing Schema and Discovery  
 **Status:** Draft  
-**Version:** 0.1.4  
+**Version:** 0.1.5  
 **Created:** February 2026  
 **Updated:** March 2026  
 **Authors:** Daniel Bloom (openstr.org)  
-**Supersedes:** openstr-rfc-001 v0.1.3  
+**Supersedes:** openstr-rfc-001 v0.1.4  
 
 ---
 
@@ -254,7 +254,7 @@ Sub-types are only meaningful for certain categories. Agents should treat unknow
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `guests_max` | integer | Yes | Maximum number of guests permitted |
+| `guests` | integer | Yes | Maximum number of guests permitted |
 | `guests_recommended` | integer | No | Recommended guest count for comfortable occupancy |
 | `beds` | integer | Yes | Total number of beds |
 | `bed_types` | array[string] | No | `king`, `queen`, `double`, `single`, `sofa_bed`, `bunk` |
@@ -502,6 +502,8 @@ All fields optional. Omission implies status unknown, not absent.
 | `wide_doorways` | boolean | Doorways of at least 80cm width throughout |
 | `wet_room` | boolean | Step-free shower or wet room |
 | `ground_floor` | boolean | Property entirely on ground floor |
+| `listing_floor` | integer | Number of flights of stairs above street-level entry to reach the listing. `0` = entry level. Defined as stair flights rather than a floor number to ensure consistent meaning across regional floor-numbering conventions (UK, US, and others). |
+| `floors_in_building` | integer | Total number of levels in the building counted from street-level entry. A building with entry level plus three upper floors = `4`. |
 | `accessibility_notes` | string | Freeform description. Max 500 characters. |
 
 ---
@@ -537,7 +539,7 @@ A complete example of a valid OpenSTR property listing. The host uses PriceLabs 
     ]
   },
   "capacity": {
-    "guests_max": 4,
+    "guests": 4,
     "guests_recommended": 2,
     "beds": 2,
     "bed_types": ["double", "double"]
@@ -681,6 +683,8 @@ A complete example of a valid OpenSTR property listing. The host uses PriceLabs 
 
 **6.13 Host pets:** Where `policies.pets.host_pets_on_property` is `true`, agents must disclose this to the guest before booking, particularly where the guest has stated allergies or preferences.
 
+**6.14 Floor and lift:** Where `accessibility.listing_floor` is greater than `0` and `accessibility.lift_available` is `false` or absent, agents must surface this as an accessibility note when presenting the listing to users who have indicated mobility requirements.
+
 ---
 
 ## 7. Security Considerations
@@ -729,6 +733,7 @@ A complete example of a valid OpenSTR property listing. The host uses PriceLabs 
 | 0.1.1-draft | February 2026 | `name` → `listing_name`; pets expanded to object; `min_stay` expanded to object with `min_stay_mode`; two-stage location updated; `security_deposit` replaced with `damage_guarantee` with IDV tiers; Schema.org rationale clarified |
 | 0.1.2-draft | February 2026 | `property_type` replaced with three-tier `property_classification` object; `pricing_rules` object added for static host discount and promotional structure; `safety_disclosures` object added as required field; `environment_tags` vocabulary added; `year_built` and `property_size` added as optional fields; sub-type vocabulary expanded |
 | 0.1.3-draft | February 2026 | Section 2.2 added — Property Classification Conventions — documenting independent derivation of classification vocabulary from OTA, Schema.org, and industry-standard terminology |
+| 0.1.5-draft | March 2026 | `capacity.guests_max` renamed to `capacity.guests` (breaking field rename — aligns RFC with live index validator and Walled Garden Hut reference implementation); `accessibility.listing_floor` added as optional integer (flights of stairs above street-level entry, `0` = entry level, convention-agnostic); `accessibility.floors_in_building` added as optional integer (total levels from street-level entry); agent behaviour guideline 6.14 added covering floor and lift accessibility surfacing |
 | 0.1.4-draft | March 2026 | Sub-type vocabulary expanded to 37 values covering full range of unique property types; `check_in_time` split into `check_in_time_from` / `check_in_time_to` window; `policies.age_restrictions` array added with freeform reason (replaces `not_suitable_infants` / `not_suitable_children` booleans); `policies.advance_notice` object added; `policies.good_track_record_required` boolean added; `policies.ev_charging_permitted` boolean added; `policies.availability_window_months` added; `policies.house_rules` promoted to structured array; `pets.pet_restrictions` array added; `pets.host_pets_on_property` boolean added; `not_suitable_infants` and `not_suitable_children` removed from `safety_disclosures` with note directing agents to `policies.age_restrictions`; amenity vocabulary expanded with kitchen, bedroom, bathroom, and outdoor items; environment tags expanded with `rural`, `countryside`, `historic`, `estate`, `farm`, `nature_reserve`, `village`; cancellation policy vocabulary corrected to `flexible`, `moderate`, `firm`, `strict`; agent behaviour guidelines expanded to cover all new fields (6.9–6.13) |
 
 ---
