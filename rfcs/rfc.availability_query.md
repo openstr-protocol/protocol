@@ -3,10 +3,10 @@
 **RFC ID:** openstr-rfc-002  
 **Title:** Availability and Pricing Query  
 **Status:** Draft  
-**Version:** 0.1.1  
+**Version:** 0.1.2  
 **Created:** February 2026  
 **Authors:** Daniel Bloom (openstr.org)  
-**Supersedes:** openstr-rfc-002 v0.1.0  
+**Supersedes:** openstr-rfc-002 v0.1.1  
 
 ---
 
@@ -209,8 +209,9 @@ A snapshot of key policies at query time. Agents must use these values when pres
 
 | Field | Type | Description |
 |---|---|---|
-| `cancellation_policy` | enum | `flexible`, `moderate`, `strict`, `non_refundable` |
-| `check_in_time` | string | `HH:MM` 24-hour format |
+| `cancellation_policy` | enum | `flexible`, `moderate`, `firm`, `strict` |
+| `check_in_time_from` | string | Earliest check-in time. `HH:MM` 24-hour format |
+| `check_in_time_to` | string | Latest check-in time. `HH:MM` 24-hour format |
 | `check_out_time` | string | `HH:MM` 24-hour format |
 | `instant_book` | boolean | Whether this booking will be confirmed instantly |
 | `damage_guarantee` | object | Current damage guarantee requirement |
@@ -293,7 +294,8 @@ The host's system has queried PriceLabs, resolved a 3-night minimum, confirmed a
   },
   "policies_snapshot": {
     "cancellation_policy": "moderate",
-    "check_in_time": "15:00",
+    "check_in_time_from": "15:00",
+    "check_in_time_to": "20:00",
     "check_out_time": "11:00",
     "instant_book": false,
     "damage_guarantee": {
@@ -367,7 +369,8 @@ A static host with their own nightly rates and a last-minute discount declared i
   },
   "policies_snapshot": {
     "cancellation_policy": "flexible",
-    "check_in_time": "14:00",
+    "check_in_time_from": "14:00",
+    "check_in_time_to": "19:00",
     "check_out_time": "10:00",
     "instant_book": true,
     "damage_guarantee": {
@@ -435,6 +438,7 @@ A static host with their own nightly rates and a last-minute discount declared i
 |---|---|---|
 | 0.1.0-draft | February 2026 | Initial draft |
 | 0.1.1-draft | February 2026 | Pet fee and extra guest fee made conditionally required in pricing breakdown; discount types expanded to include `last_minute`, `trip_length`, and `promotional`; static host example added; discount priority order defined; pricing breakdown `total` clarified to always reflect all applicable fees |
+| 0.1.2-draft | March 2026 | `cancellation_policy` enum corrected to `flexible`, `moderate`, `firm`, `strict` (removing `non_refundable`; adding `firm`) to align with RFC-001 v0.1.4. `check_in_time` split into `check_in_time_from` / `check_in_time_to` window fields to align with RFC-001 v0.1.4; examples updated accordingly |
 
 ---
 
