@@ -528,7 +528,7 @@ To remove a listing from the index, set `listing_status` to `inactive` in the li
 
 ### 11.1 Validate your listing JSON
 
-A public validator is planned at `https://openstr.org/validate`. Until it is available, validate against the RFC-001 JSON schema in the [protocol repository](https://github.com/openstr-protocol/protocol).
+A public validator is available at [https://openstr.org/validate](https://openstr.org/validate)
 
 ### 11.2 End-to-end test flow
 
