@@ -3,8 +3,9 @@
 **RFC ID:** openstr-rfc-005  
 **Title:** OpenSTR Discovery Index  
 **Status:** Draft  
-**Version:** 0.1.0  
+**Version:** 0.1.1  
 **Created:** February 2026  
+**Updated:** March 2026  
 **Authors:** Daniel Bloom (openstr.org)  
 **Depends on:** openstr-rfc-001 (Property Listing), openstr-rfc-004 (Identity Trust)  
 
@@ -374,9 +375,11 @@ Ratings are to one decimal place. Half-star increments (0.5) are the minimum gra
 
 The index validates each submitted review:
 1. Verifies the `guest_credential` is valid and issued by a trusted credential provider
-2. Confirms the `booking_reference` corresponds to a booking event logged by the host's booking endpoint (the index requests confirmation from the host's booking endpoint via a signed callback)
-3. Confirms the check-out date has passed before accepting the review
-4. Applies a one-review-per-booking rule — a guest may not submit more than one review per booking reference
+2. Confirms the check-out date has passed before accepting the review
+3. Applies a one-review-per-booking rule — a guest may not submit more than one review per booking reference
+4. Validates the `listing_id` is registered in the index
+
+> **v0.1 implementation note:** The booking confirmation callback described in earlier drafts of this section — where the index requests confirmation from the host's booking endpoint that the `booking_reference` corresponds to a real booking — is not implemented in v0.1. No `bookings` table exists in the reference implementation and no signed callback mechanism is defined. As a result, all reviews submitted in v0.1 are stored with `verification_level: host_attested` regardless of whether a valid GuestCredential is supplied. The `guest_verified` level is reserved for v0.2 once the booking callback mechanism is implemented. See section 10.2 for the security implications.
 
 Reviews that fail validation are rejected with a structured error response.
 
@@ -414,11 +417,21 @@ The index maintains a reputation record for each registered host DID:
       "review_text": "Wonderful cottage. Exactly as described.",
       "submitted_at": "2026-02-15T09:00:00Z",
       "guest_credential_issuer": "verified-identity.example.com",
+      "verification_level": "host_attested",
       "host_response": null
     }
   ]
 }
 ```
+
+Each review record in `review_history` includes a `verification_level` field with one of the following values:
+
+| Value | Meaning |
+|---|---|
+| `guest_verified` | The `booking_reference` was confirmed against a booking record via signed callback. The review is linked to a real, confirmed stay. *(Reserved for v0.2 — not achievable in v0.1.)* |
+| `host_attested` | The review was submitted with a valid GuestCredential but booking confirmation could not be verified. The identity of the reviewer is attested; the booking itself is not independently confirmed. This is the only level achievable in v0.1. |
+
+Agents should distinguish between these levels when presenting reputation data. A reputation record composed entirely of `host_attested` reviews should be presented as less authoritative than one containing `guest_verified` reviews.
 
 ### 7.5 Host response
 
@@ -484,11 +497,19 @@ The index verifies HostCredentials cryptographically against the issuer's publis
 
 ### 10.2 Review manipulation
 
-Review manipulation is mitigated by:
-- Requiring a verified GuestCredential for every review submission
-- The one-review-per-booking rule
-- Booking confirmation via signed callback to the host's booking endpoint
+The full review integrity model relies on four controls:
+- A verified GuestCredential for every review submission
+- A one-review-per-booking rule
+- Booking confirmation via signed callback from the host's booking endpoint
 - Immutability of submitted reviews
+
+**v0.1 implementation state:** The booking confirmation callback (the third control above) is not implemented in v0.1. The reference implementation has no `bookings` table and no mechanism to verify that a `booking_reference` supplied in a review request corresponds to a real confirmed booking. As a result, any caller with a valid GuestCredential can submit a review for any `booking_reference` — including a fabricated one — and it will be accepted.
+
+To prevent fabricated reviews from being presented as fully verified, **all reviews in v0.1 are stored with `verification_level: host_attested`** regardless of whether a GuestCredential is supplied. This makes the current limitation transparent to agents consuming the reputation data rather than misrepresenting reviews as booking-confirmed.
+
+**v0.2 path:** When the booking callback mechanism is implemented — requiring the availability Worker to sign and notify the index upon booking confirmation, and the index to maintain a `bookings` table for cross-reference — reviews whose `booking_reference` matches a confirmed booking record will be upgradeable to `guest_verified`. The one-review-per-booking rule already enforced in v0.1 will carry forward unchanged.
+
+Agents consuming reputation data in v0.1 should treat all reviews as `host_attested` and present them accordingly.
 
 ### 10.3 Endpoint hijacking
 
@@ -520,6 +541,7 @@ The registration endpoint is rate-limited per IP address and per HostCredential 
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.1.1 | March 2026 | S-2.3: Document that `guest_verified` is not achievable in v0.1; all reviews stored as `host_attested`; section 7.3 updated to reflect absence of booking callback; section 10.2 rewritten to describe current state and v0.2 path; `verification_level` added to reputation record schema |
 | 0.1.0-draft | February 2026 | Initial draft |
 
 ---
