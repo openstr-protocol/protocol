@@ -24,9 +24,9 @@ OpenSTR is **not** a platform. It is a specification — a set of agreed data fo
 
 **Open by default.** The specification is public, free to implement, and governed transparently. No licence fees, no approval process.
 
-**Built on existing standards.** OpenSTR is designed to be payment-compatible with the [Agentic Commerce Protocol (ACP)](https://agenticcommerce.dev) and [Google's Agent Payments Protocol (AP2)](https://cloud.google.com/blog/products/ai-machine-learning/announcing-agents-to-payments-ap2-protocol), and uses [W3C Verifiable Credentials](https://www.w3.org/TR/vc-data-model-2.0/) for the bilateral trust layer. We build on what already exists rather than reinventing it.
+**Built on existing standards.** OpenSTR is designed to be payment-compatible with [AP2 (Agent Payments Protocol)](https://ap2-protocol.org) and architecturally aligned with [UCP (Universal Commerce Protocol)](https://ucp.dev). It uses [W3C Verifiable Credentials](https://www.w3.org/TR/vc-data-model-2.0/) for the bilateral trust layer and can be transported over [MCP](https://modelcontextprotocol.io) or [A2A](https://a2a-protocol.org). We build on what already exists rather than reinventing it.
 
-**Separation of concerns.** OpenSTR handles property discovery, availability querying, and booking confirmation. Payment execution delegates to ACP/AP2-compliant payment handlers. Identity verification is handled by a pluggable credential layer.
+**Separation of concerns.** OpenSTR handles property discovery, availability querying, and booking confirmation. Payment execution delegates to AP2-compliant payment handlers. Identity verification is handled by a pluggable credential layer. Transport and agent communication are handled by MCP and A2A respectively.
 
 **Agent-first, not human-first.** Schemas and API responses are optimised for machine parsing and agent reasoning, not human reading. Human-facing interfaces are an implementation concern, not a protocol concern.
 
@@ -81,7 +81,7 @@ An AI agent acting on behalf of a guest:
 4. Queries the availability endpoint for the guest's requested dates
 5. Presents the guest with confirmed pricing including all fees and applicable discounts
 6. Presents safety disclosures, cancellation policy, and damage guarantee terms
-7. Submits a booking request with a verifiable `GuestCredential` and ACP/AP2 payment token
+7. Submits a booking request with a verifiable `GuestCredential` and an AP2 payment mandate
 8. Receives a confirmed booking response including exact location detail and access instructions
 
 No centralised platform is involved at any step. The transaction is directly between the guest's agent and the host's endpoint.
@@ -152,25 +152,28 @@ examples/
 docs/
 ├── governance.md
 ├── principles.md
-├── compatibility.md               ← ACP / AP2 / MCP compatibility notes
+├── compatibility.md               ← redirects to protocol-landscape.md
+├── protocol-landscape.md          ← MCP / A2A / UCP / AP2 compatibility notes
 └── trusted-issuers.md             ← Trusted issuer registry and accreditation requirements
 ```
 
 ---
 
-## Compatibility
+## Protocol Landscape
 
-OpenSTR is designed to complement, not compete with, existing agentic commerce infrastructure.
+OpenSTR is built within an emerging stack of open agentic commerce protocols. It is a **domain-specific protocol** — short-term rental discovery and booking — that deliberately delegates transport, payment, and agent communication to the appropriate layer rather than reinventing them.
 
-| Layer | Handled by |
+| Protocol | Role relative to OpenSTR |
 |---|---|
-| Property discovery and description | OpenSTR |
-| Availability and booking confirmation | OpenSTR |
-| Payment execution | ACP / AP2 |
-| Guest identity verification | OpenSTR `GuestCredential` + recognised third-party IDV issuers |
-| Host identity and right-to-let verification | OpenSTR `HostCredential` + accredited HostCredential issuers |
-| Guest and host reputation | OpenSTR `GuestCredential` / `HostCredential` reputation fields (v0.2) |
-| Agent-to-tool integration | MCP (OpenSTR endpoints can be exposed as MCP tools) |
+| [MCP — Model Context Protocol](https://modelcontextprotocol.io) | Transport and tool-binding layer. OpenSTR endpoints are exposed as MCP tools for agent integration. |
+| [A2A — Agent2Agent Protocol](https://a2a-protocol.org) | Inter-agent communication layer. OpenSTR defines the STR-specific data vocabulary; A2A carries it between guest and host agents. |
+| [UCP — Universal Commerce Protocol](https://ucp.dev) | Horizontal retail checkout protocol and architectural reference. OpenSTR capabilities are declared under the `org.openstr.*` UCP vendor namespace, making them negotiable by any UCP-aware agent. |
+| [AP2 — Agent Payments Protocol](https://ap2-protocol.org) | Payment mandate layer. RFC-003 booking confirmation is designed to accept AP2 mandate tokens, providing non-repudiable payment authorisation for autonomous bookings. |
+| [W3C Verifiable Credentials 2.0](https://www.w3.org/TR/vc-data-model-2.0/) | Required credential format for `GuestCredential` and `HostCredential`. |
+
+OpenSTR's unique contribution is the STR domain layer none of these protocols covers: temporal availability, date-range pricing, occupancy rules, bilateral host-guest trust, iCal synchronisation, and the channel manager integration layer needed to reach scale.
+
+→ **[Protocol Landscape](docs/protocol-landscape.md)** — detailed notes on how OpenSTR fits within MCP, A2A, UCP, and AP2, including the UCP vendor namespace declaration, the A2A binding roadmap, and the AP2 payment model alignment plan.
 
 ---
 
@@ -195,11 +198,12 @@ To propose a significant change to the protocol, open a **Spec Enhancement Propo
 | Standard | Relationship |
 |---|---|
 | [Schema.org LodgingBusiness](https://schema.org/LodgingBusiness) | OpenSTR defines its own native schema; optional `schema_org` compatibility field provided |
-| [ACP (OpenAI / Stripe)](https://agenticcommerce.dev) | OpenSTR delegates payment execution to ACP-compliant handlers |
-| [AP2 (Google)](https://cloud.google.com/blog/products/ai-machine-learning/announcing-agents-to-payments-ap2-protocol) | AP2 is a supported payment execution target |
-| [W3C Verifiable Credentials 2.0](https://www.w3.org/TR/vc-data-model-2.0/) | Required credential format for both GuestCredential and HostCredential |
+| [UCP — Universal Commerce Protocol](https://ucp.dev) | Architectural reference model; OpenSTR declares STR capabilities under the `org.openstr.*` UCP vendor namespace |
+| [AP2 — Agent Payments Protocol](https://ap2-protocol.org) | Intended payment mandate layer for RFC-003 booking confirmation |
+| [A2A — Agent2Agent Protocol](https://a2a-protocol.org) | Inter-agent transport layer; A2A binding for RFC-003 on roadmap |
+| [MCP — Model Context Protocol](https://modelcontextprotocol.io) | Tool-binding layer; OpenSTR endpoints exposed as MCP tools |
+| [W3C Verifiable Credentials 2.0](https://www.w3.org/TR/vc-data-model-2.0/) | Required credential format for `GuestCredential` and `HostCredential` |
 | [W3C Bitstring Status List](https://www.w3.org/TR/vc-bitstring-status-list/) | Recommended revocation mechanism; mandatory for HostCredential issuers |
-| [MCP (Anthropic)](https://modelcontextprotocol.io) | OpenSTR endpoints can be exposed as MCP tools for agent integration |
 | [OTA / OpenTravel Alliance](https://opentravel.org) | Prior art; OpenSTR classification vocabulary independently derived |
 | [RFC 5545 — iCalendar](https://datatracker.ietf.org/doc/html/rfc5545) | Prior art for availability; OpenSTR extends to cover pricing and booking |
 
