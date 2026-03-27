@@ -3,10 +3,11 @@
 **RFC ID:** openstr-rfc-004  
 **Title:** Host and Guest Identity, Credentials, and Trust  
 **Status:** Draft  
-**Version:** 0.1.0  
+**Version:** 0.1.1  
 **Created:** February 2026  
+**Updated:** March 2026  
 **Authors:** Daniel Bloom (openstr.org)  
-**Supersedes:** None  
+**Supersedes:** openstr-rfc-004 v0.1.0  
 
 ---
 
@@ -57,6 +58,28 @@ Hosts declare the minimum IDV level required in the listing's `damage_guarantee.
 All OpenSTR credentials carry an `expires_at` timestamp. Relying parties must treat expired credentials as invalid regardless of other fields.
 
 Revocation before expiry is supported via the W3C Bitstring Status List specification. Issuers that support revocation include a `status_list` object in the credential pointing to the relevant entry in their published status bitfield. Relying parties that receive a credential with a `status_list` entry must check revocation status before accepting the credential. Issuers that do not support revocation may omit `status_list` — in this case relying parties rely on expiry only. Issuers offering `identity_verified` or `payment_verified` guest credentials, or any HostCredential, are strongly recommended to implement revocation.
+
+### 2.6 Per-Listing Credential Paths
+
+HostCredentials are served at a per-listing path rather than a per-host path. The credential for a given listing is accessible at:
+
+```
+/.well-known/openstr/{listing_id}/credential.json
+```
+
+This path is the canonical `credential_uri` value declared in the `host_credential` reference object within the listing document (RFC-001 Section 4.2.3).
+
+**Rationale:** The listing is the atomic unit that channel managers, index services, and agents reason about — not the host entity. A channel manager serving thousands of host listings under a shared domain can generate and serve a credential file per `listing_id` as a natural extension of their existing per-listing data model, without requiring new per-host routing logic.
+
+**Credential scope:** A single HostCredential document MAY cover multiple listings belonging to the same host (same legal entity). However, the credential MUST be reachable at the per-listing path for every `listing_id` it covers. Channel managers MAY serve the same credential document at multiple per-listing paths (e.g. via symlink or redirect) — this is an implementation detail. The protocol requires only that the per-listing path resolves to a valid credential.
+
+**Example:** A host with two listings would have:
+```
+/.well-known/openstr/my-listing-001/credential.json   ← credential covering both listings
+/.well-known/openstr/my-listing-002/credential.json   ← same credential document (or redirect)
+```
+
+Both paths must resolve. Agents fetch the credential at the path corresponding to the specific `listing_id` they are verifying — they do not need to know whether the credential covers one or many listings.
 
 ### 2.5 Reputation Fields Reserved for v0.2
 
@@ -271,7 +294,7 @@ The reputation object schema is defined here for forward compatibility. Issuers 
     "https://openstr.org/contexts/v1"
   ],
   "type": ["VerifiableCredential", "OpenSTRHostCredential"],
-  "id": "https://hostregistry.example.com/credentials/host-abc123",
+  "id": "https://availability.yourdomain.com/.well-known/openstr/host-abc123-prop-001/credential.json",
   "issuer": "https://hostregistry.example.com",
   "validFrom": "2026-01-15T00:00:00Z",
   "validUntil": "2027-01-15T00:00:00Z",
@@ -453,7 +476,7 @@ The governance model will be reviewed at v1.0 with a view to transitioning to a 
 
 Before submitting a booking request, the guest's agent must verify the HostCredential referenced in the property listing:
 
-1. Fetch the credential document at `host_credential.credential_uri`
+1. Fetch the credential document at `host_credential.credential_uri`. This URI follows the convention `/.well-known/openstr/{listing_id}/credential.json` on the host's domain (see Section 2.6).
 2. Confirm `type` includes `OpenSTRHostCredential`
 3. Confirm `validUntil` is in the future
 4. Confirm `issuer` URI is present in the OpenSTR host trusted issuer registry
@@ -531,6 +554,7 @@ If any step fails, the host system must return `403 Forbidden` with an appropria
 | Version | Date | Notes |
 |---|---|---|
 | 0.1.0-draft | February 2026 | Initial draft |
+| 0.1.1-draft | March 2026 | Section 2.6 added — per-listing credential paths (`/.well-known/openstr/{listing_id}/credential.json`); credential scope note added (credential MAY cover multiple listings but MUST be reachable at per-listing path); Section 8.1 step 1 updated to reference per-listing path convention; HostCredential example `id` updated to reflect per-listing path |
 
 ---
 
