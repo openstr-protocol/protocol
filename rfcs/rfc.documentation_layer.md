@@ -1,6 +1,6 @@
 # RFC: Documentation Layer
 
-**RFC ID:** openstr-rfc-005 *(proposed)*
+**RFC ID:** openstr-rfc-006 *(proposed)*
 **Title:** Booking Documentation, Execution Confirmation, and Post-Booking Lifecycle Records
 **Status:** Pre-Draft
 **Version:** 0.0.1
