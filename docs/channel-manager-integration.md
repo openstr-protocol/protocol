@@ -1,7 +1,7 @@
 # OpenSTR Channel Manager Integration Guide
 
 **Document version:** 0.1.1  
-**Protocol version:** OpenSTR v0.1 (RFC-001 v0.1.5, RFC-002 v0.1.1, RFC-003 v0.1.1, RFC-004 v0.1.0)  
+**Protocol version:** OpenSTR v0.2 (RFC-001 v0.2.0, RFC-002 v0.1.2, RFC-003 v0.1.1, RFC-004 v0.1.1)  
 **Audience:** Property Management Systems (PMS) and channel managers  
 **Status:** Draft — for feedback and implementation
 
@@ -47,7 +47,7 @@ Additionally, each listing must be registered with the index (`POST /v1/register
 
 ### 3.1 What it is
 
-The listing document is a JSON file describing a single property. It is served at a stable HTTPS URL — conventionally `/.well-known/openstr.json` on your host's domain, or at a URL you control for listings you manage on behalf of hosts.
+The listing document is a JSON file describing a single property. It is served at a stable HTTPS URL — conventionally `/.well-known/openstr/{listing_id}.json` on the host's domain, or at a URL you control for listings you manage on behalf of hosts.
 
 The full schema is defined in [RFC-001 (rfc.property_listing.md)](https://github.com/openstr-protocol/protocol). The minimum required fields are described below.
 
@@ -55,7 +55,7 @@ The full schema is defined in [RFC-001 (rfc.property_listing.md)](https://github
 
 ```json
 {
-  "openstr_version": "0.1",
+  "openstr_version": "0.2",
   "listing_id": "your-namespace-property-001",
   "listing_name": "The Walled Garden Hut",
   "listing_url": "https://yourdomain.com/walled-garden-hut",
@@ -94,7 +94,7 @@ The full schema is defined in [RFC-001 (rfc.property_listing.md)](https://github
   "availability_endpoint": "https://availability.openstr.org/availability/your-listing-id",
   "booking_endpoint": "https://availability.openstr.org/booking/your-listing-id",
   "host_credential": {
-    "credential_uri": "https://availability.openstr.org/.well-known/host-credential.json",
+    "credential_uri": "https://availability.openstr.org/.well-known/openstr/your-listing-id/credential.json",
     "issuer": "openstr.org",
     "issued_at": "2026-01-01T00:00:00Z"
   },
@@ -168,7 +168,7 @@ https://listings.yourplatform.com/{listing_id}.json
 
 **Option B — Well-known URL on the host's domain (if you manage their domain):**
 ```
-https://{host-domain}/.well-known/openstr.json
+https://{host-domain}/.well-known/openstr/{listing_id}.json
 ```
 
 Option A is recommended for channel managers managing many listings centrally.
@@ -318,7 +318,7 @@ Content-Type: application/json
 }
 ```
 
-> The `listing_json` field should contain the full RFC-001 listing object. This is the source used by the index crawler and served at the `/.well-known/` endpoint. It must exactly match the listing document you publish at `listing_endpoint`.
+> The `listing_json` field should contain the full RFC-001 listing object. This is the source used by the index crawler and served at the `/.well-known/openstr/{listing_id}.json` endpoint. It must exactly match the listing document you publish at `listing_endpoint`.
 
 ### 6.3 iCal feed merging
 
@@ -550,17 +550,23 @@ To remove a listing from the index, set `listing_status` to `inactive` in the li
 
 ### 11.1 Validate your listing JSON
 
-Use the public validator at **[openstr.org/validate](https://openstr.org/validate)** to check your listing JSON against the RFC-001 v0.1.5 schema before registering. Paste your listing JSON and click Validate — errors and warnings are shown inline.
+Use the public validator at **[openstr.org/validate](https://openstr.org/validate)** to check your listing JSON against the RFC-001 v0.2.0 schema before registering. Paste your listing JSON and click Validate — errors and warnings are shown inline.
 
 ### 11.2 End-to-end test flow
 
-**Step 1 — Serve your listing document:**
+**Step 1 — Fetch the host manifest:**
 ```bash
-curl https://your-endpoint.com/.well-known/your-listing-id.json
+curl https://your-endpoint.com/.well-known/openstr
 ```
-Expected: valid RFC-001 JSON with all required fields.
+Expected: manifest JSON with `openstr_version: "0.2"` and a `listings` array.
 
-**Step 2 — Submit a test availability query:**
+**Step 2 — Serve your listing document:**
+```bash
+curl https://your-endpoint.com/.well-known/openstr/your-listing-id.json
+```
+Expected: valid RFC-001 v0.2 JSON with all required fields.
+
+**Step 3 — Submit a test availability query:**
 ```bash
 curl -X POST https://availability.openstr.org/availability/your-listing-id \
   -H "Content-Type: application/json" \
@@ -568,7 +574,7 @@ curl -X POST https://availability.openstr.org/availability/your-listing-id \
 ```
 Expected: RFC-002 response with `available: true` or `available: false` and a pricing breakdown.
 
-**Step 3 — Verify the listing appears in the index:**
+**Step 4 — Verify the listing appears in the index:**
 ```bash
 curl -X POST https://index.openstr.org/v1/search \
   -H "Content-Type: application/json" \
@@ -576,7 +582,7 @@ curl -X POST https://index.openstr.org/v1/search \
 ```
 Expected: your listing in the results array.
 
-**Step 4 — Fetch listing detail from the index:**
+**Step 5 — Fetch listing detail from the index:**
 ```bash
 curl https://index.openstr.org/v1/listings/{index_id}
 ```
@@ -596,7 +602,9 @@ Expected: full listing detail including status (`active_unverified` or `active_v
 | Search index | POST | `https://index.openstr.org/v1/search` |
 | Get listing detail | GET | `https://index.openstr.org/v1/listings/{index_id}` |
 | Availability query | POST | `https://availability.openstr.org/availability/{listing_id}` |
-| Listing document | GET | `https://availability.openstr.org/.well-known/{listing_id}.json` |
+| Host manifest | GET | `https://availability.openstr.org/.well-known/openstr` |
+| Listing document | GET | `https://availability.openstr.org/.well-known/openstr/{listing_id}.json` |
+| Host credential | GET | `https://availability.openstr.org/.well-known/openstr/{listing_id}/credential.json` |
 | Booking stub | POST | `https://availability.openstr.org/booking/{listing_id}` |
 | Health check | GET | `https://availability.openstr.org/health` |
 
