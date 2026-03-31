@@ -19,10 +19,10 @@ Open a pull request adding your implementation below. See CONTRIBUTING.md for de
 
 A reference implementation of the host-side OpenSTR protocol endpoints, deployed as a Cloudflare Worker. Implements a fictional property (2BR Lincoln Park garden flat, Chicago) with full availability querying, booking confirmation, cancellation, and status retrieval. Includes an interactive API explorer at `demo.openstr.org/test`.
 
-- **Listing endpoint:** `https://demo.openstr.org/.well-known/openstr.json`
+- **Listing endpoint:** `https://demo.openstr.org/.well-known/openstr/host-demo-chicago-001.json`
 - **Availability endpoint:** `https://demo.openstr.org/openstr/availability`
 - **Booking endpoint:** `https://demo.openstr.org/openstr/booking`
-- **Host credential:** `https://demo.openstr.org/.well-known/host-credential.json` *(demo stub — not issued by accredited issuer)*
+- **Host credential:** `https://demo.openstr.org/.well-known/openstr/host-demo-chicago-001/credential.json` *(demo stub — not issued by accredited issuer)*
 - **RFC-001 coverage:** Full property listing schema including pricing, amenities, policies, and damage guarantee
 - **RFC-002 coverage:** Full availability query including dynamic pricing resolution, quote issuance, and gap-fill rules
 - **RFC-003 coverage:** Full booking confirmation, status retrieval, and cancellation with refund calculation
