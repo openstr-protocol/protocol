@@ -43,6 +43,8 @@ Guest-side and host-side credentials have different trust requirements and diffe
 
 **Host credentials** must attest to both personal or business identity and property-specific right-to-let — a combination that no existing third-party registry covers today. OpenSTR defines the HostCredential schema and an accreditation framework for third-party registries that wish to issue compliant host credentials. openstr.org maintains a public registry of accredited HostCredential issuers. openstr.org does not operate as a HostCredential issuer itself — this preserves decentralisation and creates a commercial opportunity for third parties to build OpenSTR-compatible host verification services.
 
+Channel managers and property management systems (PMS) are the natural candidate issuers for HostCredentials at scale. They already hold verified KYC data and billing relationships for their host portfolios. Issuing HostCredentials is a natural extension of their existing data model and represents a revenue opportunity. The per-listing credential path convention (Section 5.5) is designed specifically to align with the infrastructure model channel managers already operate.
+
 ### 2.3 Three-Tier Guest IDV Vocabulary
 
 Guest credentials carry one of three IDV levels, each representing a different depth of identity verification:
@@ -58,28 +60,6 @@ Hosts declare the minimum IDV level required in the listing's `damage_guarantee.
 All OpenSTR credentials carry an `expires_at` timestamp. Relying parties must treat expired credentials as invalid regardless of other fields.
 
 Revocation before expiry is supported via the W3C Bitstring Status List specification. Issuers that support revocation include a `status_list` object in the credential pointing to the relevant entry in their published status bitfield. Relying parties that receive a credential with a `status_list` entry must check revocation status before accepting the credential. Issuers that do not support revocation may omit `status_list` — in this case relying parties rely on expiry only. Issuers offering `identity_verified` or `payment_verified` guest credentials, or any HostCredential, are strongly recommended to implement revocation.
-
-### 2.6 Per-Listing Credential Paths
-
-HostCredentials are served at a per-listing path rather than a per-host path. The credential for a given listing is accessible at:
-
-```
-/.well-known/openstr/{listing_id}/credential.json
-```
-
-This path is the canonical `credential_uri` value declared in the `host_credential` reference object within the listing document (RFC-001 Section 4.2.3).
-
-**Rationale:** The listing is the atomic unit that channel managers, index services, and agents reason about — not the host entity. A channel manager serving thousands of host listings under a shared domain can generate and serve a credential file per `listing_id` as a natural extension of their existing per-listing data model, without requiring new per-host routing logic.
-
-**Credential scope:** A single HostCredential document MAY cover multiple listings belonging to the same host (same legal entity). However, the credential MUST be reachable at the per-listing path for every `listing_id` it covers. Channel managers MAY serve the same credential document at multiple per-listing paths (e.g. via symlink or redirect) — this is an implementation detail. The protocol requires only that the per-listing path resolves to a valid credential.
-
-**Example:** A host with two listings would have:
-```
-/.well-known/openstr/my-listing-001/credential.json   ← credential covering both listings
-/.well-known/openstr/my-listing-002/credential.json   ← same credential document (or redirect)
-```
-
-Both paths must resolve. Agents fetch the credential at the path corresponding to the specific `listing_id` they are verifying — they do not need to know whether the credential covers one or many listings.
 
 ### 2.5 Reputation Fields Reserved for v0.2
 
@@ -294,7 +274,7 @@ The reputation object schema is defined here for forward compatibility. Issuers 
     "https://openstr.org/contexts/v1"
   ],
   "type": ["VerifiableCredential", "OpenSTRHostCredential"],
-  "id": "https://availability.yourdomain.com/.well-known/openstr/host-abc123-prop-001/credential.json",
+  "id": "https://hostregistry.example.com/credentials/host-abc123",
   "issuer": "https://hostregistry.example.com",
   "validFrom": "2026-01-15T00:00:00Z",
   "validUntil": "2027-01-15T00:00:00Z",
@@ -335,6 +315,28 @@ The reputation object schema is defined here for forward compatibility. Issuers 
   }
 }
 ```
+
+### 5.5 Per-Listing Credential Path Convention
+
+HostCredentials are published at per-listing paths under the host's well-known URI namespace, in accordance with RFC-001 v0.2:
+
+```
+GET /.well-known/openstr/{listing_id}/credential.json
+```
+
+**Rationale:** In the channel manager deployment model, the `/.well-known/` path on a host's domain is served by the channel manager's infrastructure (whether the host uses a channel manager subdomain, a CNAMEd subdomain, or a custom domain via A records). The listing record is the atomic unit the channel manager already manages. Scoping credentials to the listing ID — rather than the host — aligns with that operational model: the channel manager serves one credential file per listing ID, which maps directly to their existing per-listing data structures.
+
+**Scope:** A single HostCredential MAY cover multiple listings from the same host legal entity. However, it MUST be reachable at the per-listing path for each listing it covers. This gives channel managers operational simplicity — they can issue one credential per host and serve it at all the host's listing paths — while giving agents a consistent, predictable fetch location.
+
+**Example:** A host with three listings served by a channel manager:
+
+```
+/.well-known/openstr/my-cottage-suffolk-001/credential.json   → HostCredential (covers all three)
+/.well-known/openstr/my-cottage-suffolk-002/credential.json   → same HostCredential document (or redirect)
+/.well-known/openstr/my-cottage-suffolk-003/credential.json   → same HostCredential document (or redirect)
+```
+
+The credential document itself declares all three `listing_id` values in its `properties` array. Agents must confirm that the `listing_id` they are booking is present in the credential's `properties` array (Section 8.1, step 8).
 
 ---
 
@@ -476,7 +478,7 @@ The governance model will be reviewed at v1.0 with a view to transitioning to a 
 
 Before submitting a booking request, the guest's agent must verify the HostCredential referenced in the property listing:
 
-1. Fetch the credential document at `host_credential.credential_uri`. This URI follows the convention `/.well-known/openstr/{listing_id}/credential.json` on the host's domain (see Section 2.6).
+1. Fetch the credential document at `host_credential.credential_uri` — this will be at `/.well-known/openstr/{listing_id}/credential.json` on the host's domain for compliant v0.2 implementations
 2. Confirm `type` includes `OpenSTRHostCredential`
 3. Confirm `validUntil` is in the future
 4. Confirm `issuer` URI is present in the OpenSTR host trusted issuer registry
@@ -527,7 +529,7 @@ If any step fails, the host system must return `403 Forbidden` with an appropria
 
 **10.3 Man-in-the-middle.** All credential fetch operations must use HTTPS with valid certificates. Relying parties must reject credentials fetched over plain HTTP or from URIs with invalid certificates.
 
-**10.4 Replay attacks.** A credential presented in one booking request should not be reusable in a fabricated second request. The booking flow's `quote_id` mechanism (defined in `rfc.booking_confirmation.md`) mitigates this — the credential alone is not sufficient to create a booking without a valid, unexpired quote.
+**10.4 Replay attacks.** A credential presented in one booking request should not be reusable in a fabricated second request. The booking flow's `quote_id` mechanism (defined in RFC-003) mitigates this — the credential alone is not sufficient to create a booking without a valid, unexpired quote.
 
 **10.5 Issuer compromise.** If an accredited issuer's signing key is compromised, all credentials issued by that issuer must be considered invalid. openstr.org must be able to remove a compromised issuer from the trusted issuer registry within 24 hours of notification. Relying parties should re-validate cached issuer trust status at least once per day.
 
@@ -553,20 +555,21 @@ If any step fails, the host system must return `403 Forbidden` with an appropria
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.1.1-draft | March 2026 | Section 5.5 added: per-listing credential path convention (`/.well-known/openstr/{listing_id}/credential.json`), rationale for channel manager alignment, multi-listing scope rule. Section 2.2 updated: channel managers noted as natural credential issuers. Section 8.1 step 1 updated to reference per-listing path. Section 10.4 cross-reference updated to RFC-003. Section 13 references updated to canonical RFC numbering. |
 | 0.1.0-draft | February 2026 | Initial draft |
-| 0.1.1-draft | March 2026 | Section 2.6 added — per-listing credential paths (`/.well-known/openstr/{listing_id}/credential.json`); credential scope note added (credential MAY cover multiple listings but MUST be reachable at per-listing path); Section 8.1 step 1 updated to reference per-listing path convention; HostCredential example `id` updated to reflect per-listing path |
 
 ---
 
 ## 13. References
 
-- OpenSTR `rfc.property_listing.md` — Property listing schema and discovery
-- OpenSTR `rfc.availability_query.md` — Availability and pricing query
-- OpenSTR `rfc.booking_confirmation.md` — Booking request, confirmation and cancellation
+- OpenSTR RFC-001 — Property Listing Schema and Discovery
+- OpenSTR RFC-002 — Availability and Pricing Query
+- OpenSTR RFC-003 — Booking Request, Confirmation and Cancellation
 - [W3C Verifiable Credentials Data Model 2.0](https://www.w3.org/TR/vc-data-model-2.0/)
 - [W3C Bitstring Status List](https://www.w3.org/TR/vc-bitstring-status-list/)
 - [Ed25519Signature2020](https://w3c.github.io/vc-di-eddsa/)
 - [Decentralised Identifiers (DIDs) v1.0](https://www.w3.org/TR/did-core/)
+- [RFC 8615 — Well-Known Uniform Resource Identifiers](https://datatracker.ietf.org/doc/html/rfc8615)
 - [ISO 3166-1 alpha-2 country codes](https://www.iso.org/iso-3166-country-codes.html)
 - [ISO 8601 — Date and time format](https://www.iso.org/iso-8601-date-and-time-format.html)
 - [Stripe Identity](https://stripe.com/identity)
