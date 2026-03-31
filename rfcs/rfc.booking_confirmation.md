@@ -3,16 +3,19 @@
 **RFC ID:** openstr-rfc-003  
 **Title:** Booking Request, Confirmation, and Cancellation  
 **Status:** Draft  
-**Version:** 0.1.0  
+**Version:** 0.1.1  
 **Created:** February 2026  
+**Updated:** March 2026  
 **Authors:** Daniel Bloom (openstr.org)  
-**Supersedes:** None  
+**Supersedes:** openstr-rfc-003 v0.1.0  
 
 ---
 
 ## Abstract
 
-This RFC defines the OpenSTR booking flow — the process by which an AI agent submits a booking request on behalf of a guest, the host system validates and confirms or declines it, and the confirmed booking response is returned. It covers two confirmation paths (instant book and request-to-book), the bilateral credential validation process, the confirmed pricing and policy snapshot, the post-confirmation location disclosure, access code delivery, and a standardised cancellation endpoint. This RFC is the final transactional layer of the OpenSTR v0.1 core protocol.
+This RFC defines the OpenSTR booking flow — the process by which an AI agent submits a booking request on behalf of a guest, the host system validates and confirms or declines it, and the confirmed booking response is returned. It covers two confirmation paths (instant book and request-to-book), the bilateral credential validation process, the confirmed pricing and policy snapshot, the post-confirmation location disclosure, access code delivery, and a standardised cancellation endpoint.
+
+**Scope boundary:** This RFC defines booking intent and confirmation. Payment execution, post-booking lifecycle management (modification, dispute resolution), and tourist tax remittance are explicitly out of scope. Implementations MAY use UCP, Stripe, AP2, or any other payment rail for payment execution. The `payment_token` field in the booking request is optional and implementation-defined. See Section 3.4. This RFC is the final transactional layer of the OpenSTR v0.1 core protocol.
 
 ---
 
@@ -20,7 +23,7 @@ This RFC defines the OpenSTR booking flow — the process by which an AI agent s
 
 The property listing and availability query RFCs define how an agent discovers a property and confirms its availability and pricing. The booking confirmation RFC defines what happens next — the legally and financially consequential act of creating a reservation.
 
-This layer must handle several concerns simultaneously: validating that the guest's identity credential meets the host's requirements, authorising payment via ACP/AP2-compatible payment tokens, managing the two-step request-to-book flow where the host must actively accept before a booking is confirmed, disclosing the exact property address only at the point of confirmation, delivering access credentials, and providing a standardised mechanism for cancellation.
+This layer must handle several concerns simultaneously: validating that the guest's identity credential meets the host's requirements, managing the two-step request-to-book flow where the host must actively accept before a booking is confirmed, disclosing the exact property address only at the point of confirmation, delivering access credentials, and providing a standardised mechanism for cancellation.
 
 Getting this layer right is critical. An ambiguous or incomplete booking confirmation spec creates the conditions for disputes, double-bookings, and trust failures that would undermine the protocol's credibility.
 
@@ -28,9 +31,9 @@ Getting this layer right is critical. An ambiguous or incomplete booking confirm
 
 ## 2. Prior Art
 
-### 2.1 Agentic Commerce Protocol (ACP)
+### 2.1 Google's Universal Commerce Protocol (UCP)
 
-ACP (OpenAI / Stripe) defines a standardised checkout and payment flow for AI agent commerce. OpenSTR booking requests reference ACP-compatible payment tokens for payment authorisation. ACP does not define accommodation-specific booking flows, credential validation, access code delivery, or cancellation.
+UCP (Google) defines a standardised agent commerce flow from product discovery through checkout and order management. OpenSTR's booking confirmation flow is the hand-off point at which a UCP-capable agent would initiate the UCP checkout phase. The `listing_id` from the OpenSTR booking confirmation serves as the product identifier in the UCP order. OpenSTR does not define payment execution — this is explicitly delegated to UCP or equivalent payment rails (see Section 3.4).
 
 ### 2.2 OTA / OpenTravel Alliance
 
@@ -63,11 +66,23 @@ OpenSTR defines two booking confirmation paths, determined by the `instant_book`
 
 ### 3.3 Bilateral Credential Validation
 
-Before confirming a booking, the host system must validate the guest's `GuestCredential` against the `damage_guarantee.idv_level` declared in the listing. The guest agent must validate the host's `HostCredential` before submitting a booking request. Both validations must succeed for a booking to proceed. This is the bilateral trust model described in the README and `rfc.identity_trust.md`.
+Before confirming a booking, the host system must validate the guest's `GuestCredential` against the `damage_guarantee.idv_level` declared in the listing. The guest agent must validate the host's `HostCredential` before submitting a booking request. Both validations must succeed for a booking to proceed. This is the bilateral trust model described in RFC-004.
 
-### 3.4 Payment Delegation
+### 3.4 Payment Out of Scope
 
-OpenSTR does not define a payment mechanism. Payment is handled by ACP or AP2-compatible payment handlers. The booking request carries a `payment_token` issued by the guest's payment provider. The host system submits this token to the payment handler to authorise the charge. The booking response includes a `payment_reference` from the payment handler confirming authorisation.
+**OpenSTR does not define a payment mechanism.** Payment execution is explicitly out of scope for this RFC and for the OpenSTR protocol as a whole.
+
+Implementations MAY include a `payment_token` in the booking request to pass a payment authorisation token to the host system, but the format, provider, and settlement mechanism are implementation-defined and not standardised by OpenSTR. The `payment_token` field is optional in v0.1.
+
+Compatible payment approaches include, but are not limited to:
+
+- **UCP** — agents that support Google's Universal Commerce Protocol may initiate a UCP checkout after receiving the OpenSTR booking confirmation, using the `listing_id` and `booking_reference` as the product and order identifiers
+- **Stripe / AP2** — direct Stripe payment intent, or AP2-compatible payment token
+- **Channel manager payment rails** — the host's existing PMS or channel manager handles payment settlement outside the OpenSTR flow
+
+The booking confirmation response includes a `payment_reference` field for implementations that do process payment inline. This field is optional and may be omitted where payment is handled externally.
+
+**Post-payment calendar blocking:** When payment settles outside the OpenSTR flow, there is currently no standardised mechanism for the host system to be notified to block availability. This is a known gap documented in Section 11.7.
 
 ### 3.5 Post-Confirmation Location Disclosure
 
@@ -84,6 +99,17 @@ A standardised cancellation endpoint is included in v0.1. The endpoint accepts a
 ### 3.8 Request-to-Book Expiry
 
 For request-to-book listings, the host has a maximum of 24 hours to accept or decline. This window may be shortened by the host but not extended. If no decision is recorded within 24 hours, the host system must automatically expire the request, release the dates, and notify the agent. No charge is made for expired requests.
+
+### 3.9 Post-Payment Calendar Blocking (Known Gap)
+
+When payment is processed outside the OpenSTR booking flow — for example via UCP order management or a channel manager payment rail — there is no standardised mechanism by which the payment system notifies the OpenSTR availability endpoint to block the confirmed dates.
+
+In v0.1, the practical mitigations are:
+
+- **iCal sync** — the host's PMS or channel manager updates the iCal feed that the availability endpoint polls, blocking dates indirectly
+- **Manual config update** — the host or channel manager calls the OpenSTR `/config` endpoint directly after payment confirmation
+
+Neither is formally part of the protocol. A dedicated post-payment callback endpoint or webhook specification is the proposed resolution, deferred to v0.2. See Open Question 11.7.
 
 ---
 
@@ -110,13 +136,13 @@ The endpoint URL is declared in the property listing as `booking_endpoint`.
 | `check_out` | string (ISO 8601 date) | Check-out date. Must match the quoted dates exactly. |
 | `guests` | integer | Guest count. Must match the quoted guest count exactly. |
 | `guest_credential` | object | Verifiable guest identity credential. See Section 4.3. |
-| `payment_token` | object | ACP or AP2 compatible payment token. See Section 4.4. |
 | `guest_details` | object | Guest contact details. See Section 4.5. |
 
 #### 4.2.2 Optional Request Fields
 
 | Field | Type | Description |
 |---|---|---|
+| `payment_token` | object | Payment authorisation token, where payment is processed inline. See Section 4.4. Omit where payment is handled externally. |
 | `pets` | integer | Number of pets. Must match the quoted pet count if pets were included in the availability request. |
 | `message_to_host` | string | Optional message from the guest to the host. Max 500 characters. |
 | `agent_id` | string (URI) | Identifier of the requesting agent. |
@@ -129,7 +155,7 @@ The host system must return a `400 Bad Request` if:
 - `check_in` or `check_out` do not exactly match the quoted dates
 - `guests` does not match the quoted guest count
 - The `guest_credential` is absent or cannot be parsed
-- The `payment_token` is absent or cannot be parsed
+- The `payment_token` is present but cannot be parsed
 
 The host system must return a `403 Forbidden` if:
 - The `guest_credential` fails validation
@@ -139,7 +165,7 @@ The host system must return a `403 Forbidden` if:
 
 ### 4.3 Guest Credential Object
 
-The `guest_credential` object carries the guest's verifiable identity and reputation claims. The full credential schema is defined in `rfc.identity_trust.md`. The fields required at the booking layer are:
+The `guest_credential` object carries the guest's verifiable identity and reputation claims. The full credential schema is defined in RFC-004. The fields required at the booking layer are:
 
 | Field | Type | Description |
 |---|---|---|
@@ -148,22 +174,24 @@ The `guest_credential` object carries the guest's verifiable identity and reputa
 | `idv_level` | enum | The IDV level attested by this credential: `email_verified`, `identity_verified`, or `payment_verified` |
 | `issued_at` | string (ISO 8601 datetime) | Timestamp of credential issuance |
 | `expires_at` | string (ISO 8601 datetime) | Timestamp of credential expiry |
-| `proof` | object | Cryptographic proof of credential validity. Format defined in `rfc.identity_trust.md`. |
+| `proof` | object | Cryptographic proof of credential validity. Format defined in RFC-004. |
 
 The host system must fetch and independently verify the credential at `credential_uri` rather than trusting the inline fields alone. The inline fields serve as a pre-validation hint only.
 
 ### 4.4 Payment Token Object
 
-OpenSTR delegates payment execution to ACP or AP2-compatible payment handlers. The `payment_token` object carries the token issued by the guest's payment provider.
+The `payment_token` field is **optional**. It is included in booking requests where the implementation processes payment inline as part of the OpenSTR booking flow. Where payment is handled externally (via UCP, channel manager payment rails, or any other mechanism), it is omitted.
+
+Where included, the `payment_token` object carries a payment authorisation token issued by the guest's payment provider. Its format is implementation-defined. The following fields are defined as a non-normative reference for implementations that choose to use this field:
 
 | Field | Type | Description |
 |---|---|---|
-| `handler` | enum | `acp` or `ap2` |
+| `handler` | string | Identifier of the payment handler (e.g. `"ucp"`, `"stripe"`, `"ap2"`) |
 | `token` | string | Payment token issued by the payment handler |
-| `amount` | number | Amount to be charged. Must match the `total` from the availability response. |
-| `currency` | string | ISO 4217 currency code. Must match the quoted currency. |
+| `amount` | number | Amount to be charged. Should match the `total` from the availability response. |
+| `currency` | string | ISO 4217 currency code. Should match the quoted currency. |
 
-The host system submits this token to the declared payment handler to authorise the charge. The token must be validated by the payment handler before the booking is confirmed. If payment authorisation fails, the host system must return a `402 Payment Required` response.
+The host system is responsible for validating the `payment_token` with the declared handler. If payment authorisation fails, the host system must return a `402 Payment Required` response. Where `payment_token` is absent, the host system proceeds with booking confirmation and handles payment settlement through its own channels.
 
 ### 4.5 Guest Details Object
 
@@ -193,8 +221,8 @@ Returned synchronously when `instant_book` is `true` and all validations pass.
 | `nights` | integer | Number of nights |
 | `guests` | integer | Confirmed guest count |
 | `pricing_confirmed` | object | Final confirmed pricing. Echo of availability response pricing breakdown. |
-| `payment_reference` | string | Reference returned by the payment handler confirming charge authorisation |
-| `policies_confirmed` | object | Final confirmed policies snapshot. See Section 4.5 of rfc.availability_query.md. |
+| `payment_reference` | string | Reference returned by the payment handler confirming charge authorisation. Omitted where payment is handled externally. |
+| `policies_confirmed` | object | Final confirmed policies snapshot. See Section 4.5 of RFC-002. |
 | `location_detail` | object | Full property location, disclosed post-confirmation. See Section 5.3. |
 | `access` | object | Access information for check-in. See Section 5.4. |
 | `host_contact` | object | Host contact details for this booking. See Section 5.5. |
@@ -533,7 +561,7 @@ If `requested_by` is `host`, the guest is entitled to a full refund regardless o
 
 **10.2 Double-booking prevention.** Between availability query and booking confirmation, another booking may be accepted for the same dates. The host system must apply a lock on dates when a booking request is received and processing. If a conflict is detected, a `409 Conflict` must be returned immediately.
 
-**10.3 Payment amount validation.** The host system must verify that the `payment_token.amount` matches the `total` from the original availability response. Booking requests with mismatched payment amounts must be rejected with `400 Bad Request`.
+**10.3 Payment amount validation.** Where a `payment_token` is included, the host system must verify that `payment_token.amount` matches the `total` from the original availability response. Booking requests with a mismatched payment amount must be rejected with `400 Bad Request`.
 
 **10.4 Credential fetch and verify.** The host system must independently fetch the credential at `credential_uri` and verify its cryptographic proof. It must not trust the inline `idv_level` field alone. The credential must not be expired and must be issued by a recognised OpenSTR issuer.
 
@@ -555,13 +583,13 @@ A dedicated `POST /openstr/booking/:reference/amend` endpoint is planned for v0.
 
 **11.3 Smart lock token format.** Automated smart lock token generation, time-limited access, and API-based delivery are v0.4 concerns. The token format and delivery mechanism will be defined in the operational tooling RFC.
 
-**11.4 Dispute resolution.** This RFC does not define a dispute resolution process for cases where the property does not match the listing, or where damage guarantee claims are made. A dispute resolution extension is proposed for v0.3. The documentation layer RFC (`rfc.documentation_layer.md`, openstr-rfc-006 pre-draft) defines the evidential record — executed agreement, check-in confirmation, pre-arrival condition record, and checkout confirmation — that dispute resolution in v0.3 will depend on. Dispute resolution cannot be meaningfully specified without the documentation layer being defined first.
+**11.4 Dispute resolution.** This RFC does not define a dispute resolution process for cases where the property does not match the listing, or where damage guarantee claims are made. A dispute resolution extension is proposed for v0.3 or later.
 
 **11.5 Multi-guest credential submission.** The booking request carries a single `GuestCredential` for the lead guest. Whether co-guests should also present credentials is an open question, particularly for large groups. Deferred to a future SEP.
 
 **11.6 Receipt and invoice format.** A standardised machine-readable receipt or invoice format for tax and expense purposes is not defined in v0.1. Deferred to a future SEP.
 
-**11.7 Post-confirmation documentation trigger.** At the point of booking confirmation, a compliant implementation should trigger creation of a documentation record — a cryptographically hashed, executed agreement tied to the `booking_reference` and `confirmed_at` fields in the confirmation response. This RFC does not define the documentation layer; that is the subject of `rfc.documentation_layer.md` (openstr-rfc-006 pre-draft). The open question is whether the booking confirmation response should carry a `documentation_reference` field pointing to the verification endpoint for the executed agreement, making the documentation record queryable from the booking record without a separate lookup. This would require a minor additive change to the booking confirmation response schema in a future patch version.
+**11.7 Post-payment calendar blocking.** When payment is processed outside the OpenSTR booking flow, there is no standardised mechanism for the payment system to notify the OpenSTR availability endpoint to block the confirmed dates. In v0.1, hosts rely on iCal sync or manual config updates as practical workarounds. Three candidate approaches for v0.2: (a) a dedicated OpenSTR post-payment callback endpoint that the payment handler or UCP order management calls; (b) a webhook registration mechanism on the booking confirmation response; (c) relying on channel manager iCal propagation as the indirect path. A formal resolution is deferred to v0.2. See Section 3.9.
 
 ---
 
@@ -569,17 +597,17 @@ A dedicated `POST /openstr/booking/:reference/amend` endpoint is planned for v0.
 
 | Version | Date | Notes |
 |---|---|---|
+| 0.1.1-draft | March 2026 | Payment explicitly declared out of scope (Section 3.4 rewritten; `payment_token` demoted to optional; Section 2.1 updated: ACP replaced with UCP). Abstract updated with scope boundary declaration. Section 3.9 added: post-payment calendar blocking documented as known gap. Section 3.3 and 4.3 RFC cross-references updated to canonical style. Section 4.2.1 `payment_token` moved to optional fields. Section 4.2.3 validation rule updated. Section 5.1 `payment_reference` made optional. Section 10.3 updated to reflect optional token. Open question 11.7 added: post-payment calendar blocking resolution approaches. Section 13 references updated: ACP removed, UCP added, RFC cross-references to canonical style. |
 | 0.1.0-draft | February 2026 | Initial draft |
 
 ---
 
 ## 13. References
 
-- OpenSTR `rfc.property_listing.md` — Property listing schema and discovery
-- OpenSTR `rfc.availability_query.md` — Availability and pricing query
-- OpenSTR `rfc.identity_trust.md` — Host and Guest Credential interfaces
-- OpenSTR `rfc.documentation_layer.md` — Booking documentation, execution confirmation, and post-booking lifecycle records (pre-draft)
-- [Agentic Commerce Protocol (ACP)](https://agenticcommerce.dev)
+- OpenSTR RFC-001 — Property Listing Schema and Discovery
+- OpenSTR RFC-002 — Availability and Pricing Query
+- OpenSTR RFC-004 — Host and Guest Identity, Credentials, and Trust
+- [Google Universal Commerce Protocol (UCP)](https://developers.google.com/merchant/ucp)
 - [Google Agent Payments Protocol (AP2)](https://cloud.google.com/blog/products/ai-machine-learning/announcing-agents-to-payments-ap2-protocol)
 - [W3C Verifiable Credentials Data Model](https://www.w3.org/TR/vc-data-model/)
 - [what3words](https://what3words.com/developers/documentation)
