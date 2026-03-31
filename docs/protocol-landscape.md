@@ -81,7 +81,7 @@ OpenSTR is the STR vertical built within the same architectural paradigm as UCP:
 
 | Concern | UCP | OpenSTR |
 |---|---|---|
-| Self-declaration endpoint | `/.well-known/ucp` | `/.well-known/:listing_id.json` |
+| Self-declaration endpoint | `/.well-known/ucp` | `/.well-known/openstr/{listing_id}.json` |
 | Discovery | Google AI Mode / Gemini | `index.openstr.org` + commercial indices |
 | Capability negotiation | Intersection algorithm on profile capabilities | RFC-001 schema version |
 | Availability | Not applicable | RFC-002 availability query |
@@ -92,7 +92,7 @@ OpenSTR is the STR vertical built within the same architectural paradigm as UCP:
 
 **Vendor namespace.** UCP's governance model uses reverse-domain capability naming. OpenSTR capabilities can be declared under the `org.openstr.*` vendor namespace — for example, `org.openstr.rental.availability` and `org.openstr.rental.booking` — positioning them as UCP-compatible extensions for the STR vertical. This requires no UCP approval; the governance model explicitly delegates authority to domain holders.
 
-**What this means practically:** a host publishing an OpenSTR listing can, without conflict, also publish a `/.well-known/ucp` profile that declares `org.openstr.rental.*` capabilities. A UCP-aware agent encountering a property endpoint would then be able to negotiate STR-specific capabilities using the same profile and intersection algorithm it uses for retail checkout.
+**What this means practically:** a host publishing an OpenSTR listing can, without conflict, also publish a `/.well-known/ucp` profile that declares `org.openstr.rental.*` capabilities. A UCP-aware agent encountering a host domain would discover the OpenSTR listing manifest at `/.well-known/openstr` and the UCP profile at `/.well-known/ucp` — two parallel self-declaration endpoints, each serving its own protocol's discovery needs. The agent can then negotiate STR-specific capabilities using the UCP profile and intersection algorithm alongside the full OpenSTR listing data.
 
 **Summary:** UCP is the horizontal retail layer. OpenSTR is the STR vertical. The two are architecturally aligned and should be explicitly compatible. OpenSTR's RFC development roadmap should include a formal UCP compatibility binding.
 
