@@ -24,9 +24,9 @@ OpenSTR is **not** a platform. It is a specification — a set of agreed data fo
 
 **Open by default.** The specification is public, free to implement, and governed transparently. No licence fees, no approval process.
 
-**Built on existing standards.** OpenSTR is designed to be payment-compatible with the [Agentic Commerce Protocol (ACP)](https://agenticcommerce.dev) and [Google's Agent Payments Protocol (AP2)](https://cloud.google.com/blog/products/ai-machine-learning/announcing-agents-to-payments-ap2-protocol), and uses [W3C Verifiable Credentials](https://www.w3.org/TR/vc-data-model-2.0/) for the bilateral trust layer. We build on what already exists rather than reinventing it.
+**Built on existing standards.** OpenSTR is designed to be payment-compatible with [Google's Universal Commerce Protocol (UCP)](https://developers.google.com/merchant/ucp) and [Google's Agent Payments Protocol (AP2)](https://cloud.google.com/blog/products/ai-machine-learning/announcing-agents-to-payments-ap2-protocol), and uses [W3C Verifiable Credentials](https://www.w3.org/TR/vc-data-model-2.0/) for the bilateral trust layer. We build on what already exists rather than reinventing it.
 
-**Separation of concerns.** OpenSTR handles property discovery, availability querying, and booking confirmation. Payment execution delegates to ACP/AP2-compliant payment handlers. Identity verification is handled by a pluggable credential layer.
+**Separation of concerns.** OpenSTR handles property discovery, availability querying, and booking confirmation. Payment execution is out of scope — implementations may use UCP, AP2, Stripe, or any other payment rail. Identity verification is handled by a pluggable credential layer.
 
 **Agent-first, not human-first.** Schemas and API responses are optimised for machine parsing and agent reasoning, not human reading. Human-facing interfaces are an implementation concern, not a protocol concern.
 
@@ -53,13 +53,13 @@ All four core RFCs are drafted and available in the `rfcs/` directory.
 
 Defines how verified post-stay reviews are created, cryptographically signed, and attached to both guest and host credentials as portable, platform-independent reputation records. Review data will be anchored to confirmed OpenSTR booking references, preventing fake reviews. Reputation fields are already defined in the v0.1 `HostCredential` schema for forward compatibility.
 
-### v0.3 — Documentation, Dispute Resolution, and Guest-Host Communication *(planned)*
+### v0.3 — Guest-Host Communication *(planned)*
 
-Defines the documentation layer for the full booking lifecycle. At the point of booking confirmation, a compliant implementation produces a cryptographically hashed, tamper-proof executed agreement tied to the `booking_reference` — with a tiered execution confirmation model (session acceptance at Tier 1; W3C Verifiable Presentation at Tier 2). The executed agreement, check-in confirmation record, pre-arrival condition record, and checkout confirmation record together form the evidential basis for dispute resolution, which is also defined in v0.3. See `rfc.documentation_layer.md` (openstr-rfc-006, pre-draft) for the current design. v0.3 also includes a standardised, platform-independent messaging layer enabling pre-booking enquiries, post-booking co-ordination, and check-in communications between a guest's agent and a host's endpoint.
+A standardised, platform-independent messaging layer enabling pre-booking enquiries, post-booking coordination, and check-in communications between a guest's agent and a host's endpoint — without requiring a centralised messaging platform.
 
 ### v0.4 — Operational Tooling Integration *(planned)*
 
-Defines how host-side property management systems integrate with the OpenSTR protocol. Covers automated task management, smart lock token generation and time-limited access delivery, channel management, and operational event notifications. Post-booking lifecycle records — check-in confirmation, pre-arrival condition records, and checkout confirmation — are defined here in co-ordination with the documentation layer. A short-term rental automation platform serves as the reference implementation for v0.4.
+Defines how host-side property management systems integrate with the OpenSTR protocol. Covers automated task management, smart lock token generation and delivery, channel management, and operational event notifications. A short-term rental automation platform serves as the reference implementation for v0.4.
 
 ---
 
@@ -68,20 +68,22 @@ Defines how host-side property management systems integrate with the OpenSTR pro
 A host implementing OpenSTR exposes three endpoints on their own domain or infrastructure:
 
 ```
-GET  /.well-known/openstr.json         → Property listing metadata
-POST /openstr/availability             → Availability and pricing query
-POST /openstr/booking                  → Booking request and confirmation
+GET  /.well-known/openstr                          → Host manifest (lists all listing IDs)
+GET  /.well-known/openstr/{listing_id}.json        → Property listing metadata
+GET  /.well-known/openstr/{listing_id}/credential.json → Host credential
+POST /openstr/availability                         → Availability and pricing query
+POST /openstr/booking                              → Booking request and confirmation
 ```
 
 An AI agent acting on behalf of a guest:
 
 1. Discovers a property via web crawl, directory, or direct URL
-2. Fetches the property listing from `/.well-known/openstr.json`
+2. Fetches the property listing from `/.well-known/openstr/{listing_id}.json`
 3. Verifies the `HostCredential` against the OpenSTR trusted issuer registry
 4. Queries the availability endpoint for the guest's requested dates
 5. Presents the guest with confirmed pricing including all fees and applicable discounts
 6. Presents safety disclosures, cancellation policy, and damage guarantee terms
-7. Submits a booking request with a verifiable `GuestCredential` and ACP/AP2 payment token
+7. Submits a booking request with a verifiable `GuestCredential` and optional payment token
 8. Receives a confirmed booking response including exact location detail and access instructions
 
 No centralised platform is involved at any step. The transaction is directly between the guest's agent and the host's endpoint.
@@ -104,7 +106,7 @@ As agent trust develops, the human-readable layer will be used less. OpenSTR is 
 
 If the agent handles guest-side presentation, the host-facing side needs to solve a different problem: publishing and managing a valid OpenSTR listing, not showcasing a property. That breaks into three practical components:
 
-A **listing management interface** — where the host enters and maintains their property data and generates a valid `openstr.json`. A **hosting layer** — the three OpenSTR endpoints need to run somewhere; for non-technical hosts this is a hosted service rather than self-managed infrastructure. A **booking dashboard** — an internal management view for incoming requests, confirmed reservations, and revenue reporting. Entirely host-facing; guests never see it.
+A **listing management interface** — where the host enters and maintains their property data and generates a valid OpenSTR listing document. A **hosting layer** — the OpenSTR endpoints need to run somewhere; for non-technical hosts this is a hosted service rather than self-managed infrastructure. A **booking dashboard** — an internal management view for incoming requests, confirmed reservations, and revenue reporting. Entirely host-facing; guests never see it.
 
 These are implementation concerns rather than protocol concerns. OpenSTR defines what the endpoints must return; the tooling that helps hosts publish and manage them is a separate layer that the ecosystem will build.
 
@@ -195,13 +197,14 @@ To propose a significant change to the protocol, open a **Spec Enhancement Propo
 | Standard | Relationship |
 |---|---|
 | [Schema.org LodgingBusiness](https://schema.org/LodgingBusiness) | OpenSTR defines its own native schema; optional `schema_org` compatibility field provided |
-| [ACP (OpenAI / Stripe)](https://agenticcommerce.dev) | OpenSTR delegates payment execution to ACP-compliant handlers |
-| [AP2 (Google)](https://cloud.google.com/blog/products/ai-machine-learning/announcing-agents-to-payments-ap2-protocol) | AP2 is a supported payment execution target |
+| [UCP (Google)](https://developers.google.com/merchant/ucp) | Compatible payment and checkout standard; OpenSTR listing is the product discovery layer; UCP handles checkout and order management |
+| [AP2 (Google)](https://cloud.google.com/blog/products/ai-machine-learning/announcing-agents-to-payments-ap2-protocol) | Compatible payment execution target |
 | [W3C Verifiable Credentials 2.0](https://www.w3.org/TR/vc-data-model-2.0/) | Required credential format for both GuestCredential and HostCredential |
 | [W3C Bitstring Status List](https://www.w3.org/TR/vc-bitstring-status-list/) | Recommended revocation mechanism; mandatory for HostCredential issuers |
 | [MCP (Anthropic)](https://modelcontextprotocol.io) | OpenSTR endpoints can be exposed as MCP tools for agent integration |
 | [OTA / OpenTravel Alliance](https://opentravel.org) | Prior art; OpenSTR classification vocabulary independently derived |
 | [RFC 5545 — iCalendar](https://datatracker.ietf.org/doc/html/rfc5545) | Prior art for availability; OpenSTR extends to cover pricing and booking |
+| [RFC 8615 — Well-Known URIs](https://datatracker.ietf.org/doc/html/rfc8615) | OpenSTR discovery endpoints served under `/.well-known/openstr/` namespace |
 
 ---
 
