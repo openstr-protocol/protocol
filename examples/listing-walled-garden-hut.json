@@ -1,0 +1,175 @@
+{
+  "openstr_version": "0.2",
+  "listing_id": "walled-garden-hut-snettisham-001",
+  "listing_name": "Walled Garden Hut — Pet-Friendly Shepherd's Hut, Norfolk",
+  "property_classification": {
+    "category": "unique_space",
+    "sub_type": "shepherds_hut",
+    "occupancy_type": "entire_place"
+  },
+  "description": "Get away from it all and stay close to nature in our pet-friendly walled garden hut. An idyllic and peaceful location nestled between two historic walls and overlooking the Norfolk countryside. Surrounded by nature, this hut is the perfect place to relax and recharge.\n\nBEDROOM: King size bed separated from the living area by a wall for privacy, with ample storage.\n\nLIVING AREA: Comfortable sofa, indoor fireplace, WiFi, and TV with Freeview, Netflix, iPlayer and other streaming apps.\n\nKITCHEN: Fully equipped for self-catering including cooker, oven, toaster, mini fridge, coffee maker, kettle, crockery and cookware.\n\nOUTDOOR SPACE: Fully enclosed walled garden with outdoor dining area, outdoor furniture, decked area with two sun loungers and a private entrance.\n\nPETS: One well-behaved dog welcome. Please include the dog in your booking — a dog bed, towel and bowls will be left out. A small additional pet fee applies.\n\nIMPORTANT: The entrance to the hut has a high step. Not recommended for guests with mobility issues or for children under 12.",
+  "location": {
+    "city": "Snettisham",
+    "region": "Norfolk",
+    "country": "GB",
+    "postcode_area": "PE31",
+    "approximate_lat": 52.87,
+    "approximate_lng": 0.51,
+    "neighbourhood": "Snettisham",
+    "landmarks": [
+      "Snettisham Beach",
+      "RSPB Snettisham Nature Reserve",
+      "Sandringham Estate"
+    ],
+    "timezone": "Europe/London"
+  },
+  "capacity": {
+    "beds": 1,
+    "bed_types": [
+      "king"
+    ],
+    "guests": 2
+  },
+  "bedrooms": 1,
+  "bathrooms": 1,
+  "pricing": {
+    "currency": "GBP",
+    "nightly_rate_indicative": 120,
+    "cleaning_fee": 0,
+    "pricing_mode": "static"
+  },
+  "min_stay": {
+    "min_stay_nights": 2,
+    "min_stay_mode": "static",
+    "max_stay_nights": 28
+  },
+  "availability_endpoint": "https://availability.openstr.org/availability/walled-garden-hut-snettisham-001",
+  "booking_endpoint": "https://availability.openstr.org/booking/walled-garden-hut-snettisham-001",
+  "host_credential": {
+    "credential_uri": "https://availability.openstr.org/.well-known/openstr/walled-garden-hut-snettisham-001/credential.json",
+    "issuer": "openstr.org",
+    "issued_at": "2026-03-01T00:00:00Z"
+  },
+  "policies": {
+    "cancellation_policy": "firm",
+    "check_in_time_from": "16:00",
+    "check_in_time_to": "21:00",
+    "check_out_time": "11:00",
+    "pets": {
+      "allowed": true,
+      "pets_max": 1,
+      "pet_fee": {
+        "amount": 25,
+        "currency": "GBP",
+        "per": "per_stay"
+      },
+      "pet_restrictions": [
+        "One dog only. Must be added to booking.",
+        "No dangerous or banned breeds.",
+        "No pets on the beds.",
+        "Pets must not be left alone in the hut."
+      ],
+      "host_pets_on_property": false
+    },
+    "smoking_allowed": false,
+    "events_allowed": false,
+    "instant_book": true,
+    "damage_guarantee": {
+      "mode": "none"
+    },
+    "check_in_method": "self_checkin_keybox",
+    "quiet_hours_start": "23:00",
+    "quiet_hours_end": "07:00",
+    "age_restrictions": [
+      {
+        "not_suitable_under_age": 12,
+        "reason": "High entrance step — not suitable for guests with mobility issues or children under 12. Not suitable for infants or toddlers due to step and limited space."
+      }
+    ],
+    "good_track_record_required": true,
+    "ev_charging_permitted": false,
+    "availability_window_months": 12,
+    "advance_notice": {
+      "min_days_notice": 2,
+      "allow_short_notice_requests": true
+    },
+    "house_rules": [
+      "One dog only, added during booking at additional fee. No dangerous or banned breeds.",
+      "No pets on the beds.",
+      "No pets to be left alone in the hut.",
+      "No children under 12 or infants due to high entrance step.",
+      "No smoking, vaping or e-cigarettes.",
+      "No parties or events.",
+      "Quiet hours 23:00–07:00.",
+      "Maximum 2 guests.",
+      "Electric vehicle charging via hut sockets is not permitted.",
+      "One parking space available in front of the garden gate."
+    ]
+  },
+  "safety_disclosures": {
+    "smoke_detector": true,
+    "carbon_monoxide_detector": true,
+    "fire_extinguisher": true,
+    "first_aid_kit": true,
+    "security_cameras_exterior": false,
+    "security_cameras_interior": false,
+    "climbing_hazards": true,
+    "safety_notes": "The entrance to the hut has a high step. Not suitable for guests with mobility issues, infants, toddlers, or children under 12."
+  },
+  "amenities": [
+    "wifi",
+    "tv_streaming",
+    "indoor_fireplace",
+    "heating_central",
+    "dedicated_workspace",
+    "cooker",
+    "oven",
+    "toaster",
+    "coffee_maker",
+    "kettle",
+    "mini_fridge",
+    "cooking_basics",
+    "crockery_and_cutlery",
+    "wine_glasses",
+    "dining_table",
+    "bed_linen",
+    "room_darkening_blinds",
+    "clothes_storage",
+    "hair_dryer",
+    "body_soap",
+    "shampoo",
+    "conditioner",
+    "shower_gel",
+    "hot_water",
+    "cleaning_products",
+    "garden_private",
+    "outdoor_dining_area",
+    "outdoor_furniture",
+    "sun_loungers",
+    "patio",
+    "private_entrance",
+    "parking_private",
+    "books",
+    "board_games",
+    "smoke_detector",
+    "carbon_monoxide_detector",
+    "fire_extinguisher",
+    "first_aid_kit"
+  ],
+  "environment_tags": [
+    "rural",
+    "countryside",
+    "historic",
+    "estate",
+    "nature_reserve"
+  ],
+  "accessibility": {
+    "step_free_access": false,
+    "ground_floor": true,
+    "accessibility_notes": "High entrance step — not suitable for guests with mobility issues."
+  },
+  "languages_spoken": [
+    "en"
+  ],
+  "updated_at": "2026-03-01T00:00:00Z"
+}
