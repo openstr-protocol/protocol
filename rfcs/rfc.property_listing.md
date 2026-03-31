@@ -3,19 +3,17 @@
 **RFC ID:** openstr-rfc-001  
 **Title:** Property Listing Schema and Discovery  
 **Status:** Draft  
-**Version:** 0.2.0  
+**Version:** 0.1.4  
 **Created:** February 2026  
 **Updated:** March 2026  
 **Authors:** Daniel Bloom (openstr.org)  
-**Supersedes:** openstr-rfc-001 v0.1.5  
+**Supersedes:** openstr-rfc-001 v0.1.3  
 
 ---
 
 ## Abstract
 
 This RFC defines the OpenSTR property listing schema — the foundational data structure that enables AI agents to discover, interpret, and reason about short-term rental properties without requiring a centralised platform intermediary. It specifies the required and optional fields for a machine-readable property listing, the discovery mechanism via a well-known endpoint, a three-tier property classification system, location disclosure conventions, the pricing declaration model including static pricing rules and dynamic pricing delegation, minimum stay rules including dynamic gap-fill and seasonal overrides, environment and safety disclosures, and the damage guarantee model based on identity verification tiers.
-
-**Breaking change in v0.2.0:** The well-known discovery path has been restructured. Listing documents are now served under `/.well-known/openstr/{listing_id}.json`. Hosts additionally serve a manifest at `/.well-known/openstr` and a per-listing credential at `/.well-known/openstr/{listing_id}/credential.json`. See Section 4.1.
 
 ---
 
@@ -35,8 +33,6 @@ OpenSTR addresses this by defining a common vocabulary for property listings tha
 
 [Schema.org](https://schema.org/LodgingBusiness) defines a vocabulary for lodging businesses widely used for SEO and structured data. Schema.org provides a `petsAllowed` boolean field but does not define maximum pet counts, pet fees, property sub-types, environment categories, safety disclosures, or static pricing rules. OpenSTR defines its own native schema for all fields rather than inheriting Schema.org vocabulary directly, to ensure consistency and avoid agents needing to reason across two schemas simultaneously. The optional `schema_org` compatibility field allows hosts to also publish a full Schema.org object for web crawler compatibility.
 
-OpenSTR is architecturally distinct from Schema.org: it defines machine-callable endpoints, not passive HTML metadata. An OpenSTR listing document is a live, queryable resource that an AI agent can act on directly — not a hint to a search crawler. See `docs/protocol-landscape.md` for the full positioning.
-
 ### 2.2 Property Classification Conventions
 
 The classification of short-term rental properties by type, sub-type, and occupancy mode is an industry-wide convention that predates any single platform. The OpenSTR property classification vocabulary is derived independently from multiple sources including the OpenTravel Alliance (OTA) accommodation type codes, Schema.org's `LodgingBusiness` and `Accommodation` type hierarchy, common real estate and hospitality industry terminology in wide use across multiple jurisdictions, and the W3C's work on accommodation vocabularies. Property descriptors such as `flat`, `house`, `houseboat`, `cottage`, `villa`, `yurt`, and `treehouse` are ordinary English-language descriptions of real-world property types that exist independently of any platform and are not the intellectual property of any single organisation. The occupancy classification of entire place, private room, and shared room is similarly a long-standing industry convention used across OTA schemas, hotel booking systems, and STR platforms globally. OpenSTR makes no claim that its classification vocabulary is derived from or endorsed by any specific platform.
@@ -49,19 +45,15 @@ The iCalendar standard (RFC 5545) is widely used for availability synchronisatio
 
 The OpenTravel Alliance defines XML-based schemas for travel industry data exchange. These are primarily B2B standards designed for enterprise integrations and are not suitable for lightweight agent-to-host discovery.
 
-### 2.5 Universal Commerce Protocol (UCP)
+### 2.5 Agentic Commerce Protocol (ACP)
 
-Google's Universal Commerce Protocol (UCP) defines a standardised agent-to-merchant checkout and order management flow. OpenSTR is architecturally aligned with UCP: both operate within the same agent commerce paradigm. OpenSTR addresses property discovery, listing data, availability state, and booking intent — the layer that precedes UCP's Quote and Order phases. The two protocols are complementary. OpenSTR capabilities are declared under the `org.openstr.*` vendor namespace within the UCP capability model. See `docs/protocol-landscape.md`.
+ACP (OpenAI / Stripe) defines a standardised checkout and payment flow for AI agent commerce. OpenSTR is designed to be compatible with ACP for payment execution but addresses a different layer — property discovery and booking initiation — which ACP does not cover.
 
 ### 2.6 Google's Agent Payments Protocol (AP2)
 
-AP2 (Google) defines agent-to-agent payment flows and includes a travel booking example. Like UCP, it addresses payment execution but not property discovery or description. OpenSTR's `payment_token` field in RFC-003 is designed to be compatible with AP2 mandate token semantics.
+AP2 (Google) defines agent-to-agent payment flows and includes a travel booking example. Like ACP, it addresses payment execution but not property discovery or description.
 
-### 2.7 Model Context Protocol (MCP) and Agent-to-Agent Protocol (A2A)
-
-MCP (Anthropic) defines a standard for exposing tools and data sources to AI agents. A2A (Google) defines agent-to-agent task delegation. OpenSTR endpoints are intended to be exposed as MCP tools in reference implementations, and the RFC-003 booking confirmation flow is designed to support an A2A transport binding. Neither MCP nor A2A defines property listing or availability schemas — they are transport and capability-discovery layers that OpenSTR builds on top of.
-
-**Gap:** None of the above standards (2.1 through 2.7) define an open, lightweight, agent-readable property listing format with a three-tier property classification, availability querying, dynamic and static pricing rules, dynamic minimum stay rules, environment tagging, safety disclosures, bilateral trust credentials, or IDV-backed damage guarantees. This is the gap OpenSTR addresses.
+**Gap:** None of the above standards (2.1 through 2.6) define an open, lightweight, agent-readable property listing format with a three-tier property classification, availability querying, dynamic and static pricing rules, dynamic minimum stay rules, environment tagging, safety disclosures, bilateral trust credentials, or IDV-backed damage guarantees. This is the gap OpenSTR addresses.
 
 ---
 
@@ -116,111 +108,17 @@ The listing declares the check-in method as a discovery-time signal. The actual 
 
 OpenSTR replaces the traditional security deposit with a `damage_guarantee` object supporting three modes: `none`, `deposit`, and `idv_guarantee`. For `idv_guarantee`, the host declares a minimum IDV level. Three tiers are defined: `email_verified`, `identity_verified` (document-level, equivalent to Airbnb's passport/ID check), and `payment_verified`.
 
-### 3.11 `listing_id` as Host-Assigned Cross-Protocol Identifier
-
-The `listing_id` is assigned by the host (or their channel manager) and is opaque to the protocol. OpenSTR places no structural constraints on its format. The protocol RECOMMENDS (non-normative) that `listing_id` values use lowercase alphanumeric characters and hyphens for readability, but this is not enforced.
-
-The `listing_id` is the stable, cross-protocol identifier for the property. When a host operates both OpenSTR and UCP endpoints, the `listing_id` is the shared reference that links the two. Agents and channel managers SHOULD treat `listing_id` as the canonical unit of identity for a property across protocols.
-
-To avoid namespace collisions in multi-host or multi-channel-manager deployments, hosts and channel managers SHOULD prefix `listing_id` values with a domain segment or other organisational identifier (e.g. `guesty-abc123-prop-001`, `yourdomain-com-cottage-1`). OpenSTR does not enforce this — it is a deployment convention.
-
-### 3.12 Well-Known Path Namespacing
-
-OpenSTR discovery paths are scoped under `/.well-known/openstr/` in accordance with RFC 8615. This namespacing makes protocol membership unambiguous to crawling agents, avoids collision with other protocols using `/.well-known/`, and mirrors the pattern used by UCP (`/.well-known/ucp`). See Section 4.1.
-
-### 3.13 Per-Listing Credentials
-
-Host credentials are served at a per-listing path rather than a per-host path. This is because the listing is the atomic unit that channel managers and index services reason about — not the host entity. A credential MAY cover multiple listings (same host, same legal entity) but MUST be reachable at the per-listing path. See RFC-004.
-
-### 3.14 UCP Coexistence
-
-OpenSTR and UCP are complementary protocols operating at different layers of the agent commerce stack. A host MAY publish both an OpenSTR listing document and a UCP merchant manifest. The optional `ucp_manifest_url` field in the listing document provides a cross-reference for agents that support both protocols. See Section 4.2.2 and `docs/protocol-landscape.md`.
-
 ---
 
 ## 4. Specification
 
 ### 4.1 Discovery Mechanism
 
-#### 4.1.1 Well-Known Paths
-
-OpenSTR discovery is served under the `/.well-known/openstr/` namespace. Three distinct paths are defined:
-
-**Host manifest:**
 ```
-GET /.well-known/openstr
-```
-Returns an `OpenSTRManifest` object listing all OpenSTR listing IDs published by the host at this domain. See Section 4.1.2.
-
-**Listing document:**
-```
-GET /.well-known/openstr/{listing_id}.json
-```
-Returns a single `OpenSTRListing` object for the specified `listing_id`. This is the primary document consumed by AI agents and index crawlers.
-
-**Listing credential:**
-```
-GET /.well-known/openstr/{listing_id}/credential.json
-```
-Returns the `HostCredential` object for the specified listing. See RFC-004.
-
-All endpoints must be served over HTTPS with `Content-Type: application/json` and an `ETag` header.
-
-#### 4.1.2 Host Manifest Object
-
-The manifest at `/.well-known/openstr` declares the host's OpenSTR presence at this domain and enables agents to discover all listings without prior knowledge of individual `listing_id` values.
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `openstr_version` | string | Yes | Protocol version. Must be `"0.2"` for this spec. |
-| `host_id` | string | No | Host identifier, if registered with an index. |
-| `listings` | array[object] | Yes | Array of listing summary objects. See below. |
-| `updated_at` | string (ISO 8601) | Yes | Timestamp of last manifest update. |
-
-Each item in the `listings` array:
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `listing_id` | string | Yes | The listing identifier. |
-| `listing_name` | string | Yes | Human-readable listing name. |
-| `listing_endpoint` | string (URI) | Yes | Full URL of the listing document (`/.well-known/openstr/{listing_id}.json`). |
-| `availability_endpoint` | string (URI) | Yes | Full URL of the availability endpoint. |
-| `booking_endpoint` | string (URI) | Yes | Full URL of the booking endpoint. |
-| `credential_endpoint` | string (URI) | Yes | Full URL of the credential document (`/.well-known/openstr/{listing_id}/credential.json`). |
-
-**Example manifest:**
-
-```json
-{
-  "openstr_version": "0.2",
-  "host_id": "host-0ut0etlrxbks",
-  "listings": [
-    {
-      "listing_id": "walled-garden-hut-snettisham-001",
-      "listing_name": "Walled Garden Hut — Pet-Friendly Shepherd's Hut, Norfolk",
-      "listing_endpoint": "https://availability.openstr.org/.well-known/openstr/walled-garden-hut-snettisham-001.json",
-      "availability_endpoint": "https://availability.openstr.org/availability/walled-garden-hut-snettisham-001",
-      "booking_endpoint": "https://availability.openstr.org/booking/walled-garden-hut-snettisham-001",
-      "credential_endpoint": "https://availability.openstr.org/.well-known/openstr/walled-garden-hut-snettisham-001/credential.json"
-    }
-  ],
-  "updated_at": "2026-03-27T00:00:00Z"
-}
+GET /.well-known/openstr.json
 ```
 
-#### 4.1.3 Legacy Path Retirement
-
-The following paths defined in v0.1.x are retired in v0.2.0:
-
-| Legacy path | Replacement |
-|---|---|
-| `/.well-known/openstr.json` | `/.well-known/openstr` (manifest) |
-| `/.well-known/{listing_id}.json` | `/.well-known/openstr/{listing_id}.json` |
-| `/.well-known/host-credential.json` | `/.well-known/openstr/{listing_id}/credential.json` |
-
-Implementations upgrading from v0.1.x SHOULD return HTTP 301 redirects from legacy paths to new paths during a transition period, but are not required to.
-
----
+Returns an `OpenSTRListing` object or array. Must be served over HTTPS with `Content-Type: application/json` and an `ETag` header.
 
 ### 4.2 OpenSTRListing Object
 
@@ -228,9 +126,10 @@ Implementations upgrading from v0.1.x SHOULD return HTTP 301 redirects from lega
 
 | Field | Type | Description |
 |---|---|---|
-| `openstr_version` | string | Protocol version. Must be `"0.2"` for this spec. |
-| `listing_id` | string | Host-assigned unique identifier. Stable across updates. Opaque to the protocol — see Section 3.11. |
+| `openstr_version` | string | Protocol version. Must be `"0.1"` for this spec. |
+| `listing_id` | string | Host-assigned unique identifier. Stable across updates. |
 | `listing_name` | string | Property name or title. Max 100 characters. |
+| `listing_url` | string (URI) | Canonical URL of the human-readable listing page. |
 | `property_classification` | object | Three-tier property classification. See Section 4.3. |
 | `description` | string | Plain text description. Max 2000 characters. |
 | `location` | object | Approximate location object. See Section 4.4. |
@@ -241,42 +140,27 @@ Implementations upgrading from v0.1.x SHOULD return HTTP 301 redirects from lega
 | `min_stay` | object | Minimum stay declaration object. See Section 4.7. |
 | `availability_endpoint` | string (URI) | URL of the availability query endpoint. |
 | `booking_endpoint` | string (URI) | URL of the booking request endpoint. |
-| `host_credential` | object | Host credential reference. See Section 4.2.3 and RFC-004. |
+| `host_credential` | object | Host credential reference. See `rfc.identity_trust.md`. |
 | `policies` | object | Core policies object. See Section 4.8. |
 | `safety_disclosures` | object | Safety disclosures object. See Section 4.9. |
 | `updated_at` | string (ISO 8601) | Timestamp of last listing update. |
-
-**Note:** `listing_url` is optional in v0.2.0 (was required in v0.1.x). See Section 4.2.2.
 
 #### 4.2.2 Optional Fields
 
 | Field | Type | Description |
 |---|---|---|
-| `listing_url` | string (URI) | Canonical URL of a human-readable listing page for the property. No constraints on host or platform. Agents must not treat this as a machine-callable endpoint — see guideline 6.14. |
-| `ucp_manifest_url` | string (URI) | URL of the host's UCP merchant manifest, if the host also publishes a UCP endpoint. Enables agents that support both protocols to link the OpenSTR listing to the UCP checkout flow. See Section 3.14. |
 | `amenities` | array[string] | Amenity vocabulary. See Section 4.10. |
 | `environment_tags` | array[string] | Environment vocabulary. See Section 4.11. |
 | `images` | array[object] | Image references. See Section 4.12. |
 | `accessibility` | object | Accessibility features. See Section 4.13. |
 | `year_built` | integer | Year the property was built. |
 | `property_size` | object | `{ "value": number, "unit": "sqm" or "sqft" }` |
+| `house_rules` | string | Free-text house rules. Max 1000 characters. |
 | `neighbourhood_description` | string | Description of the surrounding area. Max 500 characters. |
 | `transit` | string | Description of nearby public transport. Max 300 characters. |
 | `languages_spoken` | array[string] | ISO 639-1 language codes. |
 | `schema_org` | object | Full Schema.org `LodgingBusiness` object for web crawler compatibility. |
 | `tags` | array[string] | Freeform host-assigned tags. Max 20 tags, 30 characters each. |
-
-#### 4.2.3 Host Credential Reference Object
-
-The `host_credential` field in the listing document is a reference to the full credential document served at `/.well-known/openstr/{listing_id}/credential.json`. It contains enough information for an agent to locate and fetch the credential without a prior manifest lookup.
-
-| Field | Type | Required | Description |
-|---|---|---|---|
-| `credential_uri` | string (URI) | Yes | Full URL of the credential document at `/.well-known/openstr/{listing_id}/credential.json`. |
-| `issuer` | string | Yes | URI of the credential issuer. |
-| `issued_at` | string (ISO 8601) | Yes | Timestamp when the credential was issued. |
-
----
 
 ### 4.3 Property Classification Object
 
@@ -344,8 +228,6 @@ Sub-types are only meaningful for certain categories. Agents should treat unknow
 | `garden_flat` | `secondary_unit` | Ground-floor or basement flat with garden access |
 | `other` | any | Distinctive property not covered by the above vocabulary |
 
----
-
 ### 4.4 Location Object
 
 #### Required location fields
@@ -353,33 +235,29 @@ Sub-types are only meaningful for certain categories. Agents should treat unknow
 | Field | Type | Description |
 |---|---|---|
 | `city` | string | City or town name |
-| `region` | string | Region, county, or state |
+| `region` | string | State, county, or region |
 | `country` | string | ISO 3166-1 alpha-2 country code |
-| `approximate_lat` | number | Approximate latitude, rounded to 2 decimal places |
-| `approximate_lng` | number | Approximate longitude, rounded to 2 decimal places |
+| `postcode_area` | string | Partial postcode or zip code (outward code only) |
+| `approximate_lat` | number | Latitude rounded to 2 decimal places (~1km precision) |
+| `approximate_lng` | number | Longitude rounded to 2 decimal places (~1km precision) |
 
 #### Optional location fields
 
 | Field | Type | Description |
 |---|---|---|
-| `postcode_area` | string | Partial postcode or zip code area (e.g. `SW1`, `60614`) |
-| `neighbourhood` | string | Neighbourhood or district name |
-| `landmarks` | array[string] | Nearby landmarks for agent-side reasoning. Max 5 items. |
-| `timezone` | string | IANA timezone identifier (e.g. `Europe/London`) |
+| `neighbourhood` | string | Named neighbourhood or district |
+| `landmarks` | array[string] | Nearby landmarks useful for agent reasoning |
 
----
+**Note:** Agents must not reverse-geocode approximate coordinates to derive an exact address. Hosts may apply a random offset of up to 0.01 degrees to prevent triangulation. Full address and exact coordinates are released in the booking confirmation `location_detail` object.
 
 ### 4.5 Capacity Object
 
 | Field | Type | Required | Description |
 |---|---|---|---|
-| `guests` | integer | Yes | Maximum number of guests. |
-| `beds` | integer | Yes | Number of beds. |
-| `bed_types` | array[string] | No | Bed type vocabulary: `single`, `double`, `queen`, `king`, `bunk`, `sofa_bed`, `floor_mattress`. |
-
-**Note:** `guests_max` and `guests_recommended` used in some v0.1.x examples are replaced by the single `guests` field (maximum) in v0.2.0.
-
----
+| `guests_max` | integer | Yes | Maximum number of guests permitted |
+| `guests_recommended` | integer | No | Recommended guest count for comfortable occupancy |
+| `beds` | integer | Yes | Total number of beds |
+| `bed_types` | array[string] | No | `king`, `queen`, `double`, `single`, `sofa_bed`, `bunk` |
 
 ### 4.6 Pricing Object
 
@@ -424,8 +302,6 @@ Declares the host's discount and promotional structure. For `static` hosts, agen
 | `valid_to` | string (ISO 8601 date) | Yes | Last date the promotion applies |
 | `min_stay_nights` | integer | No | Minimum stay required to qualify for this promotion |
 
----
-
 ### 4.7 Minimum Stay Object
 
 | Field | Type | Required | Description |
@@ -435,8 +311,6 @@ Declares the host's discount and promotional structure. For `static` hosts, agen
 | `max_stay_nights` | integer | No | Maximum stay in nights, if applicable. |
 
 **Note:** Dynamic minimum stay rules — including gap-fill rules (reduced minimum to fill gaps between bookings) and seasonal rules (e.g. reduced minimum in low season) — are managed by the host's pricing system and resolved per date window in the availability response.
-
----
 
 ### 4.8 Policies Object
 
@@ -475,7 +349,7 @@ Declares the host's discount and promotional structure. For `static` hosts, agen
 | `allowed` | boolean | Yes | Whether pets are permitted |
 | `pets_max` | integer | No | Maximum number of pets. Omission implies no stated limit if `allowed` is `true`. |
 | `pet_fee` | object | No | `{ "amount": number, "currency": string, "per": "per_stay" or "per_night" }` |
-| `pet_restrictions` | array[string] | No | Structured list of pet restrictions. Max 10 items, 200 characters each. |
+| `pet_restrictions` | array[string] | No | Structured list of pet restrictions. Max 10 items, 200 characters each. e.g. `"No pets on beds"`, `"No pets left unattended"`, `"No dangerous or banned breeds"` |
 | `host_pets_on_property` | boolean | No | Whether the host's own pets live at or visit the property. Guests may encounter host pets during their stay. |
 
 #### 4.8.2 Damage Guarantee Object
@@ -529,8 +403,6 @@ Declares the host's requirements for notice between booking and arrival.
 | `min_days_notice` | integer | Yes | Minimum number of days notice required between booking and arrival. `0` means same-day bookings considered. |
 | `allow_short_notice_requests` | boolean | No | Whether the host will consider requests with less notice than `min_days_notice`. If `true`, agents should indicate that short-notice requests may be accepted at host discretion. |
 
----
-
 ### 4.9 Safety Disclosures Object
 
 Safety disclosures are distinct from amenities. They communicate both protective features and important hazards or limitations. Agents must present safety disclosures prominently when showing a listing to a user.
@@ -561,8 +433,6 @@ All fields are required within this object. Where a condition does not apply, th
 
 **Note:** Age-based suitability restrictions (e.g. not suitable for children under 12) are declared in `policies.age_restrictions` rather than in `safety_disclosures`, to allow agents to reason about them structurally. Host pet disclosures are declared in `policies.pets.host_pets_on_property`. Agents must treat both as safety-relevant and surface them prominently alongside `safety_disclosures`.
 
----
-
 ### 4.10 Amenity Vocabulary
 
 Standardised values for the `amenities` array. Prefix freeform amenities with `custom:`.
@@ -584,8 +454,6 @@ Standardised values for the `amenities` array. Prefix freeform amenities with `c
 **Work:** `dedicated_workspace`, `monitor_external`
 
 **Bedroom and bathroom:** `bed_linen`, `towels`, `room_darkening_blinds`, `clothes_storage`, `hair_dryer`, `body_soap`, `shampoo`, `conditioner`, `shower_gel`, `hot_water`, `cleaning_products`
-
----
 
 ### 4.11 Environment Tags Vocabulary
 
@@ -613,8 +481,6 @@ Standardised values for the `environment_tags` array. Describes the property's p
 | `nature_reserve` | Adjacent to or within a nature reserve or protected area |
 | `village` | Located in a village or small settlement |
 
----
-
 ### 4.12 Image Object
 
 | Field | Type | Required | Description |
@@ -624,8 +490,6 @@ Standardised values for the `environment_tags` array. Describes the property's p
 | `room_type` | enum | No | `bedroom`, `bathroom`, `kitchen`, `living_room`, `outdoor`, `entrance`, `other` |
 | `width_px` | integer | No | Image width in pixels |
 | `height_px` | integer | No | Image height in pixels |
-
----
 
 ### 4.13 Accessibility Object
 
@@ -638,23 +502,20 @@ All fields optional. Omission implies status unknown, not absent.
 | `wide_doorways` | boolean | Doorways of at least 80cm width throughout |
 | `wet_room` | boolean | Step-free shower or wet room |
 | `ground_floor` | boolean | Property entirely on ground floor |
-| `flights_to_listing` | integer | Number of stair flights between street level and the listing entrance. `0` means street level or lift access. Convention-agnostic alternative to floor numbering. |
-| `floors_in_building` | integer | Total number of floors in the building. |
 | `accessibility_notes` | string | Freeform description. Max 500 characters. |
 
 ---
 
 ## 5. Example
 
-A complete example of a valid OpenSTR v0.2 property listing. The host uses PriceLabs for dynamic pricing and minimum stay management, requires identity-verified guests, and operates a smart lock entry system.
+A complete example of a valid OpenSTR property listing. The host uses PriceLabs for dynamic pricing and minimum stay management, requires identity-verified guests, and operates a smart lock entry system.
 
 ```json
 {
-  "openstr_version": "0.2",
-  "listing_id": "yourdomain-com-lincoln-park-001",
+  "openstr_version": "0.1",
+  "listing_id": "host-abc123-prop-001",
   "listing_name": "Quiet Garden Apartment, Lincoln Park",
   "listing_url": "https://yourdomain.com/properties/lincoln-park-apartment",
-  "ucp_manifest_url": "https://yourdomain.com/.well-known/ucp",
   "property_classification": {
     "category": "flat",
     "sub_type": "garden_flat",
@@ -676,7 +537,8 @@ A complete example of a valid OpenSTR v0.2 property listing. The host uses Price
     ]
   },
   "capacity": {
-    "guests": 4,
+    "guests_max": 4,
+    "guests_recommended": 2,
     "beds": 2,
     "bed_types": ["double", "double"]
   },
@@ -705,7 +567,7 @@ A complete example of a valid OpenSTR v0.2 property listing. The host uses Price
   "availability_endpoint": "https://yourdomain.com/openstr/availability",
   "booking_endpoint": "https://yourdomain.com/openstr/booking",
   "host_credential": {
-    "credential_uri": "https://yourdomain.com/.well-known/openstr/yourdomain-com-lincoln-park-001/credential.json",
+    "credential_uri": "https://yourdomain.com/.well-known/openstr-host-credential.json",
     "issuer": "https://credentials.example-issuer.com",
     "issued_at": "2026-01-15T00:00:00Z"
   },
@@ -782,12 +644,10 @@ A complete example of a valid OpenSTR v0.2 property listing. The host uses Price
   "accessibility": {
     "step_free_access": true,
     "ground_floor": true,
-    "flights_to_listing": 0,
-    "floors_in_building": 1,
     "accessibility_notes": "Ground floor apartment with step-free access from street."
   },
   "languages_spoken": ["en"],
-  "updated_at": "2026-03-27T09:00:00Z"
+  "updated_at": "2026-02-01T09:00:00Z"
 }
 ```
 
@@ -801,7 +661,7 @@ A complete example of a valid OpenSTR v0.2 property listing. The host uses Price
 
 **6.3 Location:** Exact address is released only in the booking confirmation `location_detail` object. Agents must not attempt to derive exact addresses from approximate coordinates.
 
-**6.4 Host credential:** Agents should verify the `host_credential` before presenting a listing as bookable. The credential is fetched from `host_credential.credential_uri`. Listings with unverifiable or expired credentials should be flagged.
+**6.4 Host credential:** Agents should verify the `host_credential` before presenting a listing as bookable. Listings with unverifiable or expired credentials should be flagged.
 
 **6.5 IDV requirements:** Agents must check `damage_guarantee.idv_level` before initiating a booking and confirm the guest's credential satisfies it.
 
@@ -821,19 +681,13 @@ A complete example of a valid OpenSTR v0.2 property listing. The host uses Price
 
 **6.13 Host pets:** Where `policies.pets.host_pets_on_property` is `true`, agents must disclose this to the guest before booking, particularly where the guest has stated allergies or preferences.
 
-**6.14 `listing_url`:** Where `listing_url` is present, agents may surface it as a human-readable reference for the user. Agents must not treat `listing_url` as an endpoint — it is a human-readable page, not a machine-callable resource.
-
-**6.15 `ucp_manifest_url`:** Where `ucp_manifest_url` is present and the agent supports UCP, the agent MAY use it to initiate a UCP checkout flow after booking intent is confirmed via RFC-003. The presence of `ucp_manifest_url` does not change OpenSTR's booking flow — RFC-003 remains the authoritative booking initiation mechanism.
-
-**6.16 Manifest discovery:** Agents discovering a new host domain SHOULD first request `/.well-known/openstr` to enumerate all available listings before fetching individual listing documents.
-
 ---
 
 ## 7. Security Considerations
 
 **7.1 HTTPS requirement:** All endpoints must be served over HTTPS.
 
-**7.2 Host credential validation:** Agents must independently fetch and validate the `host_credential` document from the `credential_uri` path.
+**7.2 Host credential validation:** Agents must independently fetch and validate the `host_credential` document.
 
 **7.3 URL injection:** Agents must validate that endpoint URIs are well-formed HTTPS URLs.
 
@@ -842,8 +696,6 @@ A complete example of a valid OpenSTR v0.2 property listing. The host uses Price
 **7.5 IDV credential trust:** A curated list of recognised OpenSTR IDV issuers will be maintained in `docs/trusted-issuers.md`. Candidate issuers include Google Identity, Apple, Stripe Identity, Onfido, and Yoti.
 
 **7.6 Security camera disclosure:** Hosts must disclose all security cameras. Interior cameras in bedrooms or bathrooms are prohibited. Agents must surface camera disclosures to users before booking confirmation.
-
-**7.7 `listing_id` namespace collisions:** In multi-host or multi-channel-manager deployments, hosts SHOULD prefix `listing_id` values to avoid collisions. See Section 3.11.
 
 ---
 
@@ -865,11 +717,9 @@ A complete example of a valid OpenSTR v0.2 property listing. The host uses Price
 
 **8.8 Promotional pricing verification:** No mechanism currently exists for an agent to verify that a declared promotion is genuine. A promotion verification extension is deferred to a future SEP.
 
-**8.9 EV charging:** The `ev_charging_permitted` field covers the common restriction case. A future SEP may define a structured EV charging capability field (charge speed, connector type, fee) for properties that actively offer EV charging as an amenity.
+**8.9 EV charging:** The `ev_charging_permitted` field in v0.1.4 covers the common restriction case. A future SEP may define a structured EV charging capability field (charge speed, connector type, fee) for properties that actively offer EV charging as an amenity.
 
-**8.10 Post-payment calendar blocking:** When a payment is completed via an external payment rail (UCP, Stripe, or equivalent), the mechanism for triggering calendar blocking on the availability endpoint is not yet defined. Options include a UCP Order Management webhook, an iCal feed update via the channel manager, or a dedicated OpenSTR booking confirmation callback endpoint (RFC-003 extension). This is acknowledged as a v0.1 limitation; resolution deferred to v0.2. See RFC-003 Section 8.
-
-**8.11 `ucp_manifest_url` cross-reference standardisation:** The `ucp_manifest_url` field enables coexistence but does not define a formal binding between an OpenSTR booking confirmation and a UCP order. A formal cross-protocol glue specification (linking RFC-003 booking references to UCP order IDs) is deferred to a future RFC.
+**8.10 Terms versioning:** The documentation layer RFC (`rfc.documentation_layer.md`, openstr-rfc-006 pre-draft) requires that an executed agreement can reference an immutable snapshot of the rental terms in effect at the point of booking. The `policies_confirmed` snapshot in the booking confirmation response covers pricing and cancellation policy but not the full rental terms — house rules, pet policy, damage deposit requirements. A `terms_version` field (or equivalent) is required in the property listing schema so that the documentation record can reference a specific, immutable version of the terms. This is a breaking change candidate for RFC-001 v0.3 and must be co-ordinated with the documentation layer RFC. No change to the current schema is made in v0.1.
 
 ---
 
@@ -881,26 +731,20 @@ A complete example of a valid OpenSTR v0.2 property listing. The host uses Price
 | 0.1.1-draft | February 2026 | `name` → `listing_name`; pets expanded to object; `min_stay` expanded to object with `min_stay_mode`; two-stage location updated; `security_deposit` replaced with `damage_guarantee` with IDV tiers; Schema.org rationale clarified |
 | 0.1.2-draft | February 2026 | `property_type` replaced with three-tier `property_classification` object; `pricing_rules` object added for static host discount and promotional structure; `safety_disclosures` object added as required field; `environment_tags` vocabulary added; `year_built` and `property_size` added as optional fields; sub-type vocabulary expanded |
 | 0.1.3-draft | February 2026 | Section 2.2 added — Property Classification Conventions — documenting independent derivation of classification vocabulary from OTA, Schema.org, and industry-standard terminology |
-| 0.1.4-draft | March 2026 | Sub-type vocabulary expanded to 37 values; `check_in_time` split into window; `policies.age_restrictions` array added; `policies.advance_notice` added; `policies.good_track_record_required` added; `policies.ev_charging_permitted` added; `policies.availability_window_months` added; `policies.house_rules` promoted to structured array; `pets.pet_restrictions` array added; `pets.host_pets_on_property` added; amenity and environment vocabulary expanded; cancellation policy vocabulary corrected |
-| 0.1.5-draft | March 2026 | `accessibility` object: `flights_to_listing` and `floors_in_building` added; `capacity.guests_max` → `capacity.guests` rename |
-| 0.2.0-draft | March 2026 | **Breaking change.** Well-known paths restructured: listing documents moved to `/.well-known/openstr/{listing_id}.json`; host manifest added at `/.well-known/openstr`; per-listing credential path defined at `/.well-known/openstr/{listing_id}/credential.json`. Legacy paths `/.well-known/openstr.json`, `/.well-known/{listing_id}.json`, and `/.well-known/host-credential.json` retired. `listing_url` demoted from required to optional with SHOULD NOT guidance against third-party platform URLs. `ucp_manifest_url` optional field added for UCP coexistence. `listing_id` opaqueness and cross-protocol UID role formally documented (Section 3.11). `listing_id` namespace collision guidance added (Section 3.11, Section 7.7). `capacity.guests` field confirmed (replacing v0.1.x `guests_max`). Prior art section updated: ACP removed; UCP, MCP, A2A sections added. Agent behaviour guidelines 6.14–6.16 added. Open questions 8.10–8.11 added. `openstr_version` updated to `"0.2"`. |
+| 0.1.4-draft | March 2026 | Sub-type vocabulary expanded to 37 values covering full range of unique property types; `check_in_time` split into `check_in_time_from` / `check_in_time_to` window; `policies.age_restrictions` array added with freeform reason (replaces `not_suitable_infants` / `not_suitable_children` booleans); `policies.advance_notice` object added; `policies.good_track_record_required` boolean added; `policies.ev_charging_permitted` boolean added; `policies.availability_window_months` added; `policies.house_rules` promoted to structured array; `pets.pet_restrictions` array added; `pets.host_pets_on_property` boolean added; `not_suitable_infants` and `not_suitable_children` removed from `safety_disclosures` with note directing agents to `policies.age_restrictions`; amenity vocabulary expanded with kitchen, bedroom, bathroom, and outdoor items; environment tags expanded with `rural`, `countryside`, `historic`, `estate`, `farm`, `nature_reserve`, `village`; cancellation policy vocabulary corrected to `flexible`, `moderate`, `firm`, `strict`; agent behaviour guidelines expanded to cover all new fields (6.9–6.13) |
 
 ---
 
 ## 10. References
 
 - [Schema.org LodgingBusiness](https://schema.org/LodgingBusiness)
-- [Google Universal Commerce Protocol (UCP)](https://developers.google.com/commerce/ucp)
+- [Agentic Commerce Protocol (ACP)](https://agenticcommerce.dev)
 - [Google Agent Payments Protocol (AP2)](https://cloud.google.com/blog/products/ai-machine-learning/announcing-agents-to-payments-ap2-protocol)
-- [Model Context Protocol (MCP)](https://modelcontextprotocol.io)
-- [Agent-to-Agent Protocol (A2A)](https://developers.google.com/agent-to-agent)
 - [W3C Verifiable Credentials Data Model](https://www.w3.org/TR/vc-data-model/)
 - [RFC 5545 — iCalendar](https://datatracker.ietf.org/doc/html/rfc5545)
-- [RFC 8615 — Well-Known URIs](https://datatracker.ietf.org/doc/html/rfc8615)
 - [ISO 3166-1 alpha-2 country codes](https://www.iso.org/iso-3166-country-codes.html)
 - [ISO 4217 currency codes](https://www.iso.org/iso-4217-currency-codes.html)
 - [ISO 639-1 language codes](https://www.iso.org/iso-639-language-codes.html)
 - OpenSTR `rfc.identity_trust.md` — Host and Guest Credential interfaces
 - OpenSTR `rfc.availability_query.md` — Availability and pricing query
 - OpenSTR `rfc.booking_confirmation.md` — Booking request and confirmation flow
-- OpenSTR `docs/protocol-landscape.md` — Protocol landscape and ecosystem positioning
