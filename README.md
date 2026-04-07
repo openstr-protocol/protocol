@@ -168,7 +168,7 @@ OpenSTR is designed to complement, not compete with, existing agentic commerce i
 |---|---|
 | Property discovery and description | OpenSTR |
 | Availability and booking confirmation | OpenSTR |
-| Payment execution | ACP / AP2 |
+| Payment execution | UCP / AP2 |
 | Guest identity verification | OpenSTR `GuestCredential` + recognised third-party IDV issuers |
 | Host identity and right-to-let verification | OpenSTR `HostCredential` + accredited HostCredential issuers |
 | Guest and host reputation | OpenSTR `GuestCredential` / `HostCredential` reputation fields (v0.2) |
